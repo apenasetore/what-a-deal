@@ -96,3 +96,6 @@ mix credo
 ```
 
 RabbitMQ Management UI: http://localhost:15672 (guest/guest)
+
+## Consultas
+- noreplay@email.com
