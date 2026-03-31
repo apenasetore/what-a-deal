@@ -96,3 +96,6 @@ mix credo
 ```
 
 RabbitMQ Management UI: http://localhost:15672 (guest/guest)
+
+
+## Test ruleset no pushs to main  Test ruleset no pushs to main 
