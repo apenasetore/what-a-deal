@@ -1,4 +1,4 @@
-# PromoHub - Roadmap de Desenvolvimento
+# WHAT-A-DEAL - Roadmap de Desenvolvimento
 
 ## Visao Geral do Projeto
 
