@@ -164,15 +164,15 @@ promo_hub/
 **Quem:** Juntos (pair programming)
 **Objetivo:** Infraestrutura base pronta, ambos com ambiente funcional.
 
-- [ ] Criar repositorio GitHub (privado), configurar branch protection em `main`
-- [ ] Criar umbrella project: `mix new promo_hub --umbrella`
-- [ ] Adicionar os 6 apps ao umbrella (`shared`, `gateway`, `promocao`, `ranking`, `notificacao`, `cliente`)
-- [ ] Criar `docker-compose.yml` com RabbitMQ (management UI na porta 15672)
-- [ ] Adicionar dependencias base: `amqp`, `jason`, `credo`, `mox`
-- [ ] Configurar `mix format` e `.credo.exs`
-- [ ] Criar GitHub Actions CI basico (format --check, credo, test)
-- [ ] Verificar que `docker compose up` + `mix test` funciona nos dois ambientes
-- [ ] Criar `.gitignore` adequado
+- [x] Criar repositorio GitHub (privado), configurar branch protection em `main`
+- [x] Criar umbrella project: `mix new promo_hub --umbrella`
+- [x] Adicionar os 6 apps ao umbrella (`shared`, `gateway`, `promocao`, `ranking`, `notificacao`, `cliente`)
+- [x] Criar `docker-compose.yml` com RabbitMQ (management UI na porta 15672)
+- [x] Adicionar dependencias base: `amqp`, `jason`, `credo`, `mox`
+- [x] Configurar `mix format` e `.credo.exs`
+- [x] Criar GitHub Actions CI basico (format --check, credo, test)
+- [x] Verificar que `docker compose up` + `mix test` funciona nos dois ambientes
+- [x] Criar `.gitignore` adequado
 
 **Entregavel:** `mix test` passa, CI verde, RabbitMQ rodando em Docker.
 
