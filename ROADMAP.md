@@ -182,12 +182,12 @@ promo_hub/
 **Quem:** Ambos, alternando driver/navigator
 **Objetivo:** Fundacao compartilhada que todos os microsservicos usam.
 
-- [ ] **Shared.Crypto** — Gerar par de chaves RSA (por microsservico), assinar payload (SHA256withRSA), verificar assinatura
+- [x] **Shared.Crypto** — Gerar par de chaves RSA (por microsservico), assinar payload (SHA256withRSA), verificar assinatura
   - Gerar chaves: `:public_key.generate_key({:rsa, 2048, 65537})`
   - Assinar: `:public_key.sign(payload, :sha256, private_key)`
   - Verificar: `:public_key.verify(payload, :sha256, signature, public_key)`
   - Armazenar chaves em arquivos PEM por servico (em `priv/keys/`)
-- [ ] **Shared.Event** — Struct padrao para todos os eventos:
+- [x] **Shared.Event** — Struct padrao para todos os eventos:
   ```elixir
   %Event{
     id: UUID,
@@ -198,13 +198,13 @@ promo_hub/
     timestamp: DateTime
   }
   ```
-- [ ] **Shared.Event.Envelope** — Serializar/deserializar evento para JSON (com signature em Base64)
-- [ ] **Shared.RabbitMQ** — Wrapper de conexao:
+- [x] **Shared.Event.Envelope** — Serializar/deserializar evento para JSON (com signature em Base64)
+- [x] **Shared.RabbitMQ** — Wrapper de conexao:
   - Conectar, declarar exchange (topic, "promocoes"), declarar fila, bind, publish, consume
   - Reconnect automatico com backoff exponencial
   - Usar `GenServer` para gerenciar conexao
-- [ ] **Testes unitarios** para crypto (assinar, verificar, rejeitar assinatura invalida)
-- [ ] **Testes unitarios** para serialização de eventos
+- [x] **Testes unitarios** para crypto (assinar, verificar, rejeitar assinatura invalida)
+- [x] **Testes unitarios** para serialização de eventos
 
 **Entregavel:** `mix test apps/shared` verde, crypto e eventos funcionando isoladamente.
 
