@@ -1,20 +1,38 @@
 defmodule Gateway.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
 
+  require Logger
+
   @impl true
   def start(_type, _args) do
+    ensure_keys!()
+
+    rabbitmq_url = Application.get_env(:gateway, :rabbitmq_url, "amqp://guest:guest@localhost")
+
     children = [
-      # Starts a worker by calling: Gateway.Worker.start_link(arg)
-      # {Gateway.Worker, arg}
+      Gateway.PromoStore,
+      {Shared.RabbitMQ,
+       name: :gateway_rabbitmq,
+       url: rabbitmq_url,
+       queues: [{"gateway_promocoes", ["promocao.publicada"]}]},
+      Gateway.Consumer
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Gateway.Supervisor]
+    opts = [strategy: :rest_for_one, name: Gateway.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp ensure_keys! do
+    case Shared.Crypto.load_private_key("gateway") do
+      {:ok, _} ->
+        :ok
+
+      {:error, _} ->
+        Logger.info("Gerando par de chaves RSA para o Gateway...")
+        {priv, pub} = Shared.Crypto.generate_key_pair()
+        Shared.Crypto.save_keys("gateway", priv, pub)
+    end
   end
 end
