@@ -105,3 +105,49 @@ mix credo
 RabbitMQ Management UI: http://localhost:15672 (guest/guest)
 
 
+  # Abrir no navegador
+  http://localhost:15672
+  # Login: guest / guest
+
+  CLI via Docker
+
+  # Listar exchanges
+  docker exec rabbitmq rabbitmqctl list_exchanges
+
+  # Listar filas com mensagens pendentes
+  docker exec rabbitmq rabbitmqctl list_queues name
+  messages consumers
+
+  # Listar bindings (routing keys ligadas às filas)
+  docker exec rabbitmq rabbitmqctl list_bindings
+
+  # Monitorar em tempo real (atualiza a cada 2s)
+  watch -n 2 'docker exec rabbitmq rabbitmqctl
+  list_queues name messages consumers'
+
+  rabbitmqadmin (mais detalhado)
+
+  # Instalar (dentro do container já vem)
+  docker exec rabbitmq rabbitmqadmin list exchanges
+  docker exec rabbitmq rabbitmqadmin list queues
+  docker exec rabbitmq rabbitmqadmin list bindings
+
+  # Ver mensagens de uma fila sem consumir
+  docker exec rabbitmq rabbitmqadmin get
+  queue=fila_promocao count=5
+  docker exec rabbitmq rabbitmqadmin get
+  queue=fila_ranking count=5
+  docker exec rabbitmq rabbitmqadmin get
+  queue=gateway_promocoes count=5
+
+  Filas do projeto
+
+  As filas que você vai ver são:
+  - fila_promocao — consome promocao.recebida
+  - fila_ranking — consome promocao.voto
+  - gateway_promocoes — consome promocao.publicada
+
+────────────────────────────────────────────────────────
+❯  
+────────────────────────────────────────────────────────
+  ? for shortcuts
