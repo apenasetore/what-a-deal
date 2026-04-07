@@ -6,18 +6,6 @@ defmodule Gateway.CLI do
   validadas, votar em promocoes e sair do sistema.
   """
 
-  def start_link(_opts) do
-    Task.start_link(fn -> loop() end)
-  end
-
-  def child_spec(opts) do
-    %{
-      id: __MODULE__,
-      start: {__MODULE__, :start_link, [opts]},
-      restart: :temporary
-    }
-  end
-
   def loop do
     IO.puts("""
 
@@ -63,23 +51,27 @@ defmodule Gateway.CLI do
     IO.puts("\n--- Cadastrar Promocao ---")
     nome = prompt("Nome do produto: ")
     descricao = prompt("Descricao: ")
-    preco_original = prompt("Preco original (ex: 89.90): ") |> parse_float()
-    preco_promocional = prompt("Preco promocional (ex: 45.00): ") |> parse_float()
-    categoria = prompt("Categoria (ex: livro, eletronico): ")
-    loja = prompt("Loja: ")
 
-    promo_data = %{
-      "nome" => nome,
-      "descricao" => descricao,
-      "preco_original" => preco_original,
-      "preco_promocional" => preco_promocional,
-      "categoria" => categoria,
-      "loja" => loja
-    }
+    with {:ok, preco_original} <- prompt_float("Preco original (ex: 89.90): "),
+         {:ok, preco_promocional} <- prompt_float("Preco promocional (ex: 45.00): ") do
+      categoria = prompt("Categoria (ex: livro, eletronico): ")
+      loja = prompt("Loja: ")
 
-    case Gateway.Publisher.publish_promocao(promo_data) do
-      :ok -> IO.puts("\nPromocao enviada para validacao!")
-      {:error, reason} -> IO.puts("\nErro ao enviar: #{inspect(reason)}")
+      promo_data = %{
+        "nome" => nome,
+        "descricao" => descricao,
+        "preco_original" => preco_original,
+        "preco_promocional" => preco_promocional,
+        "categoria" => categoria,
+        "loja" => loja
+      }
+
+      case Gateway.Publisher.publish_promocao(promo_data) do
+        :ok -> IO.puts("\nPromocao enviada para validacao!")
+        {:error, reason} -> IO.puts("\nErro ao enviar: #{inspect(reason)}")
+      end
+    else
+      :error -> IO.puts("\nValor numerico invalido. Cadastro cancelado.")
     end
   end
 
@@ -123,26 +115,26 @@ defmodule Gateway.CLI do
         IO.puts("#{idx}. #{promo["nome"]} — #{promo["loja"]}")
       end)
 
-      escolha = prompt("\nNumero da promocao: ") |> parse_int()
+      case prompt_int("\nNumero da promocao: ") do
+        {:ok, escolha} when escolha >= 1 and escolha <= length(promos) ->
+          promos |> Enum.at(escolha - 1) |> registrar_voto()
 
-      promos
-      |> Enum.at(escolha - 1)
-      |> registrar_voto()
+        _ ->
+          IO.puts("Opcao invalida!")
+      end
     end
   end
 
-  defp registrar_voto(nil), do: IO.puts("Opcao invalida!")
-
   defp registrar_voto(promo) do
-    voto = prompt("Voto (+1 ou -1): ") |> parse_int()
+    case prompt_int("Voto (+1 ou -1): ") do
+      {:ok, voto} when voto in [1, -1] ->
+        case Gateway.Publisher.publish_voto(promo, voto) do
+          :ok -> IO.puts("\nVoto registrado!")
+          {:error, reason} -> IO.puts("\nErro ao votar: #{inspect(reason)}")
+        end
 
-    if voto in [1, -1] do
-      case Gateway.Publisher.publish_voto(promo["id"], voto) do
-        :ok -> IO.puts("\nVoto registrado!")
-        {:error, reason} -> IO.puts("\nErro ao votar: #{inspect(reason)}")
-      end
-    else
-      IO.puts("Voto invalido! Use +1 ou -1.")
+      _ ->
+        IO.puts("Voto invalido! Use +1 ou -1.")
     end
   end
 
@@ -152,17 +144,17 @@ defmodule Gateway.CLI do
     IO.gets(message) |> String.trim()
   end
 
-  defp parse_float(str) do
-    case Float.parse(str) do
-      {val, _} -> val
-      :error -> 0.0
+  defp prompt_float(message) do
+    case Float.parse(prompt(message)) do
+      {val, _} -> {:ok, val}
+      :error -> :error
     end
   end
 
-  defp parse_int(str) do
-    case Integer.parse(str) do
-      {val, _} -> val
-      :error -> 0
+  defp prompt_int(message) do
+    case Integer.parse(prompt(message)) do
+      {val, _} -> {:ok, val}
+      :error -> :error
     end
   end
 
