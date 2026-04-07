@@ -179,11 +179,6 @@ defmodule Shared.RabbitMQ do
     end
   end
 
-  defp resubscribe(channel, queues) do
-    Logger.info("RabbitMQ reconectado, restaurando subscriptions")
-    Enum.each(queues, fn {queue_name, _topics} -> AMQP.Basic.consume(channel, queue_name) end)
-  end
-
   @doc false
   @impl true
   def handle_info({:basic_deliver, payload, meta}, state) do
@@ -209,6 +204,11 @@ defmodule Shared.RabbitMQ do
   end
 
   # --- Funcoes privadas ---
+
+  defp resubscribe(channel, queues) do
+    Logger.info("RabbitMQ reconectado, restaurando subscriptions")
+    Enum.each(queues, fn {queue_name, _topics} -> AMQP.Basic.consume(channel, queue_name) end)
+  end
 
   defp connect(url, queues, queue_opts) do
     with {:ok, connection} <- AMQP.Connection.open(url),
