@@ -168,6 +168,7 @@ defmodule Shared.RabbitMQ do
 
     case connect(url, queues, queue_opts) do
       {:ok, connection, channel} ->
+        if state.callback != nil, do: resubscribe(channel, queues)
         {:noreply, %{state | connection: connection, channel: channel, backoff: @initial_backoff}}
 
       {:error, reason} ->
@@ -176,6 +177,11 @@ defmodule Shared.RabbitMQ do
         Process.send_after(self(), :reconnect, new_backoff)
         {:noreply, %{state | backoff: new_backoff}}
     end
+  end
+
+  defp resubscribe(channel, queues) do
+    Logger.info("RabbitMQ reconectado, restaurando subscriptions")
+    Enum.each(queues, fn {queue_name, _topics} -> AMQP.Basic.consume(channel, queue_name) end)
   end
 
   @doc false
