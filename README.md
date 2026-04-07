@@ -87,6 +87,9 @@ docker compose up -d
 # Instalar dependencias
 mix deps.get
 
+# Gerar chaves de assinatura digital (gateway, promocao, ranking)
+mix gen_keys
+
 # Rodar testes
 mix test
 
@@ -94,6 +97,10 @@ mix test
 mix format --check-formatted
 mix credo
 ```
+
+> As chaves geradas por `mix gen_keys` ficam em `apps/shared/priv/keys/` e nao
+> sao versionadas. Cada desenvolvedor precisa rodar este comando uma vez apos
+> clonar o repositorio. Use `mix gen_keys --force` para regenerar.
 
 RabbitMQ Management UI: http://localhost:15672 (guest/guest)
 

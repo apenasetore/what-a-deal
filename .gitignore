@@ -9,5 +9,5 @@ erl_crash.dump
 /config/*.secret.exs
 .elixir_ls/
 
-# Chaves privadas (Fase 1 - crypto)
-priv/keys/*.pem
+# Chaves de assinatura digital — geradas via `mix gen_keys`
+apps/shared/priv/keys/
