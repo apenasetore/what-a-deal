@@ -105,7 +105,8 @@ defmodule Promocao.ConsumerTest do
       gateway_pub: gateway_pub,
       promocao_priv: promocao_priv
     } do
-      original = Event.new("promocao.recebida", %{"nome" => "X"}, "gateway") |> Event.sign(gateway_priv)
+      original =
+        Event.new("promocao.recebida", %{"nome" => "X"}, "gateway") |> Event.sign(gateway_priv)
 
       # Adultera o payload depois da assinatura
       tampered = %{original | payload: %{"nome" => "Y"}}

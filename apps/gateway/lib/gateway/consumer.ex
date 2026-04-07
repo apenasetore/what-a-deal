@@ -17,7 +17,6 @@ defmodule Gateway.Consumer do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-
   @impl true
   def init(_opts) do
     Process.send_after(self(), :subscribe, 500)

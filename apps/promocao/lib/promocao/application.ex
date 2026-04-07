@@ -31,9 +31,7 @@ defmodule Promocao.Application do
   def start(_type, _args) do
     children = [
       {Shared.RabbitMQ,
-       name: @rabbitmq_name,
-       url: rabbitmq_url(),
-       queues: [{@queue, @routing_keys}]}
+       name: @rabbitmq_name, url: rabbitmq_url(), queues: [{@queue, @routing_keys}]}
     ]
 
     opts = [strategy: :one_for_one, name: Promocao.Supervisor]
