@@ -77,7 +77,7 @@ defmodule Shared.Event.Envelope do
 
       {:ok, event}
     else
-      :error -> {:error, :invalid_signature}
+      :error -> {:error, :invalid_envelope}
       {:error, reason} -> {:error, reason}
     end
   end
