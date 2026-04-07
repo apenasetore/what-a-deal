@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(xargs file:*)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(mix format:*)",
+      "Bash(mix test:*)"
     ]
   }
 }
