@@ -1,20 +1,28 @@
 defmodule Gateway.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
 
   @impl true
   def start(_type, _args) do
-    children = [
-      # Starts a worker by calling: Gateway.Worker.start_link(arg)
-      # {Gateway.Worker, arg}
-    ]
+    children =
+      if Application.get_env(:gateway, :autostart, true) do
+        rabbitmq_url =
+          Application.get_env(:gateway, :rabbitmq_url, "amqp://guest:guest@localhost")
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Gateway.Supervisor]
+        [
+          Gateway.PromoStore,
+          {Shared.RabbitMQ,
+           name: :gateway_rabbitmq,
+           url: rabbitmq_url,
+           queues: [{"gateway_promocoes", ["promocao.publicada"]}]},
+          Gateway.Consumer
+        ]
+      else
+        []
+      end
+
+    opts = [strategy: :rest_for_one, name: Gateway.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end
