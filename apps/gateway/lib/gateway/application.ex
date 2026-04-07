@@ -7,7 +7,8 @@ defmodule Gateway.Application do
   def start(_type, _args) do
     children =
       if Application.get_env(:gateway, :autostart, true) do
-        rabbitmq_url = Application.get_env(:gateway, :rabbitmq_url, "amqp://guest:guest@localhost")
+        rabbitmq_url =
+          Application.get_env(:gateway, :rabbitmq_url, "amqp://guest:guest@localhost")
 
         [
           Gateway.PromoStore,
