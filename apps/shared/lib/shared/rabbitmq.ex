@@ -181,8 +181,18 @@ defmodule Shared.RabbitMQ do
   @doc false
   @impl true
   def handle_info({:basic_deliver, payload, meta}, state) do
-    if state.callback != nil, do: state.callback.(meta.routing_key, payload)
-    AMQP.Basic.ack(state.channel, meta.delivery_tag)
+    channel = state.channel
+    tag = meta.delivery_tag
+
+    if state.callback != nil do
+      Task.start(fn ->
+        state.callback.(meta.routing_key, payload)
+        AMQP.Basic.ack(channel, tag)
+      end)
+    else
+      AMQP.Basic.ack(channel, tag)
+    end
+
     {:noreply, state}
   end
 
