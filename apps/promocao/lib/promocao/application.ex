@@ -29,20 +29,24 @@ defmodule Promocao.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      {Shared.RabbitMQ,
-       name: @rabbitmq_name, url: rabbitmq_url(), queues: [{@queue, @routing_keys}]}
-    ]
+    if Application.get_env(:promocao, :autostart, true) do
+      children = [
+        {Shared.RabbitMQ,
+         name: @rabbitmq_name, url: rabbitmq_url(), queues: [{@queue, @routing_keys}]}
+      ]
 
-    opts = [strategy: :one_for_one, name: Promocao.Supervisor]
+      opts = [strategy: :one_for_one, name: Promocao.Supervisor]
 
-    case Supervisor.start_link(children, opts) do
-      {:ok, pid} ->
-        Promocao.Consumer.start(@rabbitmq_name)
-        {:ok, pid}
+      case Supervisor.start_link(children, opts) do
+        {:ok, pid} ->
+          Promocao.Consumer.start(@rabbitmq_name)
+          {:ok, pid}
 
-      error ->
-        error
+        error ->
+          error
+      end
+    else
+      Supervisor.start_link([], strategy: :one_for_one, name: Promocao.Supervisor)
     end
   end
 
