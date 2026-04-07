@@ -1,20 +1,36 @@
 defmodule Ranking.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
 
+  @rabbitmq_name :ranking_rabbitmq
+  @queue "fila_ranking"
+  @routing_keys ["promocao.voto"]
+
   @impl true
   def start(_type, _args) do
-    children = [
-      # Starts a worker by calling: Ranking.Worker.start_link(arg)
-      # {Ranking.Worker, arg}
-    ]
+    if Application.get_env(:ranking, :autostart, true) do
+      rabbitmq_url =
+        Application.get_env(:ranking, :rabbitmq_url, "amqp://guest:guest@localhost")
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Ranking.Supervisor]
-    Supervisor.start_link(children, opts)
+      children = [
+        Ranking.VoteStore,
+        {Shared.RabbitMQ,
+         name: @rabbitmq_name, url: rabbitmq_url, queues: [{@queue, @routing_keys}]}
+      ]
+
+      opts = [strategy: :one_for_one, name: Ranking.Supervisor]
+
+      case Supervisor.start_link(children, opts) do
+        {:ok, pid} ->
+          Ranking.Consumer.start(@rabbitmq_name)
+          {:ok, pid}
+
+        error ->
+          error
+      end
+    else
+      Supervisor.start_link([], strategy: :one_for_one, name: Ranking.Supervisor)
+    end
   end
 end
