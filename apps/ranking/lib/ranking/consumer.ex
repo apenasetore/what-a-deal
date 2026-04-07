@@ -50,13 +50,14 @@ defmodule Ranking.Consumer do
          true <- Event.verify(event, gateway_pub) do
       promo_id = event.payload["promo_id"]
       voto = event.payload["voto"]
+      promo = event.payload["promo"]
 
       score = Ranking.VoteStore.vote(promo_id, voto)
       Logger.info("Voto registrado: promo=#{promo_id} voto=#{voto} score=#{score}")
 
       if score >= @destaque_threshold and not Ranking.VoteStore.destaque?(promo_id) do
         Ranking.VoteStore.marcar_destaque(promo_id)
-        Ranking.Publisher.publish_destaque(event.payload, rabbitmq)
+        Ranking.Publisher.publish_destaque(promo, rabbitmq)
       end
 
       :ok

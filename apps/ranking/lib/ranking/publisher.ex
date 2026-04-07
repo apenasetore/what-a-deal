@@ -19,7 +19,7 @@ defmodule Ranking.Publisher do
          event <- Event.new("promocao.destaque", promo_payload, @service_name),
          signed <- Event.sign(event, private_key),
          {:ok, json} <- Envelope.encode(signed) do
-      Logger.info("Publicando promocao.destaque: promo=#{promo_payload["promo_id"]}")
+      Logger.info("Publicando promocao.destaque: promo=#{promo_payload["id"]}")
       RabbitMQ.publish(rabbitmq, "promocao.destaque", json)
     end
   end
