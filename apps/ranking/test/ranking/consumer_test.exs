@@ -37,7 +37,7 @@ defmodule Ranking.ConsumerTest do
 
       Consumer.handle_message("promocao.voto", json, ctx.gateway_pub, ctx.rabbitmq)
 
-      refute_received {:published, "promocao.destaque", _}
+      refute_received {:published, "promocao.categoria.destaque", _}
     end
 
     test "publica destaque quando score atinge threshold", ctx do
@@ -46,10 +46,10 @@ defmodule Ranking.ConsumerTest do
         Consumer.handle_message("promocao.voto", json, ctx.gateway_pub, ctx.rabbitmq)
       end
 
-      assert_received {:published, "promocao.destaque", payload}
+      assert_received {:published, "promocao.categoria.destaque", payload}
 
       {:ok, event} = Envelope.decode(payload)
-      assert event.type == "promocao.destaque"
+      assert event.type == "promocao.categoria.destaque"
       assert event.source == "ranking"
       assert event.payload["id"] == ctx.promo_id
     end
@@ -69,7 +69,7 @@ defmodule Ranking.ConsumerTest do
         Consumer.handle_message("promocao.voto", json, ctx.gateway_pub, ctx.rabbitmq)
       end
 
-      assert_received {:published, "promocao.destaque", payload}
+      assert_received {:published, "promocao.categoria.destaque", payload}
       {:ok, event} = Envelope.decode(payload)
 
       assert event.payload["nome"] == "Clean Code"
@@ -83,7 +83,7 @@ defmodule Ranking.ConsumerTest do
         Consumer.handle_message("promocao.voto", json, ctx.gateway_pub, ctx.rabbitmq)
       end
 
-      assert_received {:published, "promocao.destaque", payload}
+      assert_received {:published, "promocao.categoria.destaque", payload}
       {:ok, event} = Envelope.decode(payload)
 
       {:ok, ranking_pub} = Crypto.load_public_key("ranking")
@@ -97,13 +97,13 @@ defmodule Ranking.ConsumerTest do
         Consumer.handle_message("promocao.voto", json, ctx.gateway_pub, ctx.rabbitmq)
       end
 
-      assert_received {:published, "promocao.destaque", _}
+      assert_received {:published, "promocao.categoria.destaque", _}
 
       # Mais um voto positivo nao deve publicar de novo
       json = signed_voto(ctx.promo_id, 1, ctx.gateway_priv)
       Consumer.handle_message("promocao.voto", json, ctx.gateway_pub, ctx.rabbitmq)
 
-      refute_received {:published, "promocao.destaque", _}
+      refute_received {:published, "promocao.categoria.destaque", _}
     end
 
     test "votos negativos abaixam o score e nao destacam", ctx do
@@ -116,7 +116,7 @@ defmodule Ranking.ConsumerTest do
       Consumer.handle_message("promocao.voto", json_pos, ctx.gateway_pub, ctx.rabbitmq)
 
       # score = 2 -1 + 1 = 2, abaixo do threshold de 3
-      refute_received {:published, "promocao.destaque", _}
+      refute_received {:published, "promocao.categoria.destaque", _}
     end
   end
 

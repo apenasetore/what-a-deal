@@ -6,18 +6,18 @@ defmodule Cliente.ApplicationTest do
   alias Cliente.Application, as: ClienteApp
 
   describe "build_routing_keys/2" do
-    test "categorias mapeiam para promocao.<categoria>" do
+    test "categorias mapeiam para promocao.categoria.<categoria>" do
       assert ClienteApp.build_routing_keys(["livro", "jogo"], false) ==
-               ["promocao.livro", "promocao.jogo"]
+               ["promocao.categoria.livro", "promocao.categoria.jogo"]
     end
 
-    test "destaque=true adiciona promocao.destaque ao final" do
+    test "destaque=true adiciona promocao.categoria.destaque ao final" do
       assert ClienteApp.build_routing_keys(["livro"], true) ==
-               ["promocao.livro", "promocao.destaque"]
+               ["promocao.categoria.livro", "promocao.categoria.destaque"]
     end
 
     test "lista vazia + destaque=true" do
-      assert ClienteApp.build_routing_keys([], true) == ["promocao.destaque"]
+      assert ClienteApp.build_routing_keys([], true) == ["promocao.categoria.destaque"]
     end
 
     test "lista vazia + destaque=false" do
