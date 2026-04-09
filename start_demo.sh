@@ -69,19 +69,19 @@ cliente3=$(tmux split-window -h -t "$cliente2" -c "$CLIENT_DIR" -l 50% -P -F '#{
 
 # Backend: gateway+promocao+ranking+notificacao com cliente desabilitado
 tmux send-keys -t "$backend" \
-  "CLIENTE_AUTOSTART=false iex -S mix" Enter
+  "clear && CLIENTE_AUTOSTART=false iex -S mix" Enter
 
 # Cliente 1: livro + destaque
 tmux send-keys -t "$cliente1" \
-  "CLIENTE_CATEGORIAS=livro CLIENTE_DESTAQUE=true iex -S mix" Enter
+  "clear && CLIENTE_CATEGORIAS=livro CLIENTE_DESTAQUE=true iex -S mix" Enter
 
 # Cliente 2: jogo, sem destaque
 tmux send-keys -t "$cliente2" \
-  "CLIENTE_CATEGORIAS=jogo CLIENTE_DESTAQUE=false iex -S mix" Enter
+  "clear && CLIENTE_CATEGORIAS=jogo CLIENTE_DESTAQUE=false iex -S mix" Enter
 
 # Cliente 3: eletronico + destaque
 tmux send-keys -t "$cliente3" \
-  "CLIENTE_CATEGORIAS=eletronico CLIENTE_DESTAQUE=true iex -S mix" Enter
+  "clear && CLIENTE_CATEGORIAS=eletronico CLIENTE_DESTAQUE=true iex -S mix" Enter
 
 # Foco no backend (CLI do gateway) e attach
 tmux select-pane -t "$backend"

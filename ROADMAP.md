@@ -217,7 +217,7 @@ promo_hub/
 #### Gateway
 - [x] CLI interativa com menu:
   ```
-  === PromoHub ===
+  === What-a-Deal ===
   1. Cadastrar promoção
   2. Listar promoções
   3. Votar em promoção
