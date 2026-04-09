@@ -25,7 +25,7 @@ defmodule Cliente.ConsumerTest do
 
       output =
         capture_io(fn ->
-          Consumer.handle_message("promocao.livro", Jason.encode!(notif))
+          Consumer.handle_message("promocao.categoria.livro", Jason.encode!(notif))
         end)
 
       assert output =~ "[livro]"
@@ -49,7 +49,7 @@ defmodule Cliente.ConsumerTest do
 
       output =
         capture_io(fn ->
-          Consumer.handle_message("promocao.livro", Jason.encode!(notif))
+          Consumer.handle_message("promocao.categoria.livro", Jason.encode!(notif))
         end)
 
       assert output =~ "[livro]"
@@ -61,7 +61,7 @@ defmodule Cliente.ConsumerTest do
     test "ignora payload JSON invalido sem crashar" do
       output =
         capture_io(fn ->
-          assert :ok = Consumer.handle_message("promocao.livro", "isso nao e json")
+          assert :ok = Consumer.handle_message("promocao.categoria.livro", "isso nao e json")
         end)
 
       refute output =~ "Nova promocao"
@@ -73,7 +73,7 @@ defmodule Cliente.ConsumerTest do
 
       output =
         capture_io(fn ->
-          Consumer.handle_message("promocao.jogo", Jason.encode!(notif))
+          Consumer.handle_message("promocao.categoria.jogo", Jason.encode!(notif))
         end)
 
       assert output =~ "[jogo]"
@@ -94,14 +94,14 @@ defmodule Cliente.ConsumerTest do
       }
 
       json =
-        Event.new("promocao.destaque", promo, "ranking")
+        Event.new("promocao.categoria.destaque", promo, "ranking")
         |> Event.sign(ranking_priv)
         |> Event.Envelope.encode()
         |> elem(1)
 
       output =
         capture_io(fn ->
-          assert :ok = Consumer.handle_message("promocao.destaque", json)
+          assert :ok = Consumer.handle_message("promocao.categoria.destaque", json)
         end)
 
       assert output =~ "[livro]"
@@ -115,7 +115,7 @@ defmodule Cliente.ConsumerTest do
     test "ignora envelope invalido sem crashar" do
       output =
         capture_io(fn ->
-          assert :ok = Consumer.handle_message("promocao.destaque", "lixo")
+          assert :ok = Consumer.handle_message("promocao.categoria.destaque", "lixo")
         end)
 
       refute output =~ "HOT DEAL"
@@ -126,7 +126,7 @@ defmodule Cliente.ConsumerTest do
     test "label 'HOT DEAL' quando tipo='hot deal'" do
       output =
         capture_io(fn ->
-          Consumer.display_notificacao("promocao.livro", %{
+          Consumer.display_notificacao("promocao.categoria.livro", %{
             "tipo" => "hot deal",
             "categoria" => "livro",
             "promo" => %{"nome" => "X"}
@@ -139,7 +139,7 @@ defmodule Cliente.ConsumerTest do
     test "label 'Nova promocao' quando tipo='nova'" do
       output =
         capture_io(fn ->
-          Consumer.display_notificacao("promocao.livro", %{
+          Consumer.display_notificacao("promocao.categoria.livro", %{
             "tipo" => "nova",
             "categoria" => "livro",
             "promo" => %{"nome" => "X"}

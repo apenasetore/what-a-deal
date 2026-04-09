@@ -16,8 +16,8 @@ defmodule Notificacao.ApplicationTest do
       assert "promocao.publicada" in NotificacaoApp.routing_keys()
     end
 
-    test "routing_keys contem promocao.destaque" do
-      assert "promocao.destaque" in NotificacaoApp.routing_keys()
+    test "routing_keys contem promocao.categoria.destaque" do
+      assert "promocao.categoria.destaque" in NotificacaoApp.routing_keys()
     end
   end
 

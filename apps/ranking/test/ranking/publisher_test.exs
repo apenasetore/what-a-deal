@@ -17,17 +17,17 @@ defmodule Ranking.PublisherTest do
 
       assert :ok = Publisher.publish_destaque(promo, rabbitmq)
 
-      assert_received {:published, "promocao.destaque", _payload}
+      assert_received {:published, "promocao.categoria.destaque", _payload}
     end
 
     test "evento publicado tem type, source e payload corretos", %{rabbitmq: rabbitmq} do
       promo = sample_promo()
       Publisher.publish_destaque(promo, rabbitmq)
 
-      assert_received {:published, "promocao.destaque", payload}
+      assert_received {:published, "promocao.categoria.destaque", payload}
       {:ok, event} = Envelope.decode(payload)
 
-      assert event.type == "promocao.destaque"
+      assert event.type == "promocao.categoria.destaque"
       assert event.source == "ranking"
       assert event.payload == promo
     end
@@ -35,7 +35,7 @@ defmodule Ranking.PublisherTest do
     test "evento e assinado pela chave privada do ranking", %{rabbitmq: rabbitmq} do
       Publisher.publish_destaque(sample_promo(), rabbitmq)
 
-      assert_received {:published, "promocao.destaque", payload}
+      assert_received {:published, "promocao.categoria.destaque", payload}
       {:ok, event} = Envelope.decode(payload)
 
       {:ok, ranking_pub} = Crypto.load_public_key("ranking")

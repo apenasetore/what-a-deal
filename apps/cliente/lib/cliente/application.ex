@@ -143,18 +143,18 @@ defmodule Cliente.Application do
   ## Exemplos
 
       iex> Cliente.Application.build_routing_keys(["livro", "jogo"], true)
-      ["promocao.livro", "promocao.jogo", "promocao.destaque"]
+      ["promocao.categoria.livro", "promocao.categoria.jogo", "promocao.categoria.destaque"]
 
       iex> Cliente.Application.build_routing_keys(["livro"], false)
-      ["promocao.livro"]
+      ["promocao.categoria.livro"]
 
       iex> Cliente.Application.build_routing_keys([], true)
-      ["promocao.destaque"]
+      ["promocao.categoria.destaque"]
   """
   @spec build_routing_keys([String.t()], boolean()) :: [String.t()]
   def build_routing_keys(categorias, destaque?) do
-    categoria_keys = Enum.map(categorias, &"promocao.#{&1}")
-    if destaque?, do: categoria_keys ++ ["promocao.destaque"], else: categoria_keys
+    categoria_keys = Enum.map(categorias, &"promocao.categoria.#{&1}")
+    if destaque?, do: categoria_keys ++ ["promocao.categoria.destaque"], else: categoria_keys
   end
 
   @doc """

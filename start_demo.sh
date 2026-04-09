@@ -81,7 +81,7 @@ tmux send-keys -t "$cliente2" \
 
 # Cliente 3: eletronico + destaque
 tmux send-keys -t "$cliente3" \
-  "clear && CLIENTE_CATEGORIAS=eletronico CLIENTE_DESTAQUE=true iex -S mix" Enter
+  "clear && CLIENTE_CATEGORIAS=*  iex -S mix" Enter
 
 # Foco no backend (CLI do gateway) e attach
 tmux select-pane -t "$backend"

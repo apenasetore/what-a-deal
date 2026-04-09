@@ -58,13 +58,13 @@ defmodule Cliente.Consumer do
   - qualquer outro `"promocao.<categoria>"` → decodifica como notificacao JSON (formato Notificacao)
   """
   @spec handle_message(String.t(), binary()) :: :ok
-  def handle_message("promocao.destaque", payload) do
+  def handle_message("promocao.categoria.destaque", payload) do
     case Envelope.decode(payload) do
       {:ok, event} ->
         display_destaque_event(event)
 
       {:error, reason} ->
-        Logger.warning("Erro ao decodificar promocao.destaque: #{inspect(reason)}")
+        Logger.warning("Erro ao decodificar promocao.categoria.destaque: #{inspect(reason)}")
     end
 
     :ok
@@ -147,6 +147,6 @@ defmodule Cliente.Consumer do
     end
   end
 
-  defp extract_categoria("promocao." <> cat), do: cat
+  defp extract_categoria("promocao.categoria." <> cat), do: cat
   defp extract_categoria(_), do: "?"
 end
