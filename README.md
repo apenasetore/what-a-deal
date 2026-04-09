@@ -17,33 +17,35 @@ O sistema e composto por **4 microsservicos** + **1 biblioteca compartilhada** +
 
 ```
                         RabbitMQ (Exchange: topic "promocoes")
-                        ┌─────────────────────────────────┐
-                        │                                 │
-┌──────────┐            │   Routing Keys:                 │           ┌──────────────┐
-│ Gateway  │──publish──▶│   promocao.recebida             │──consume─▶│ MS Promocao  │
-│ (CLI)    │            │   promocao.voto                 │           └──────┬───────┘
-│          │◀─consume───│   promocao.publicada            │                  │
-└──────────┘            │   promocao.destaque             │──publish──────────┘
-                        │   promocao.<categoria>          │
-┌──────────┐            │                                 │           ┌──────────────┐
-│ Cliente  │◀─consume───│                                 │──consume─▶│ MS Ranking   │
-│ Consumer │            │                                 │           └──────┬───────┘
-└──────────┘            │                                 │──publish──────────┘
-                        │                                 │
-                        │                                 │           ┌──────────────┐
-                        │                                 │──consume─▶│MS Notificacao│
-                        │                                 │           └──────┬───────┘
-                        └─────────────────────────────────┘──publish──────────┘
+                        ┌──────────────────────────────────────┐
+                        │                                      │
+┌──────────┐            │   Routing Keys:                      │           ┌──────────────┐
+│ Gateway  │──publish──▶│   promocao.recebida                  │──consume─▶│ MS Promocao  │
+│ (CLI)    │            │   promocao.voto                      │           └──────┬───────┘
+│          │◀─consume───│   promocao.publicada                 │                  │
+└──────────┘            │   promocao.categoria.destaque        │──publish──────────┘
+                        │   promocao.categoria.<categoria>     │
+┌──────────┐            │                                      │           ┌──────────────┐
+│ Cliente  │◀─consume───│                                      │──consume─▶│ MS Ranking   │
+│ Consumer │            │                                      │           └──────┬───────┘
+└──────────┘            │                                      │──publish──────────┘
+                        │                                      │
+                        │                                      │           ┌──────────────┐
+                        │                                      │──consume─▶│MS Notificacao│
+                        │                                      │           └──────┬───────┘
+                        └──────────────────────────────────────┘──publish──────────┘
 ```
+
+> **Nota:** O sistema utiliza exclusivamente **exchange do tipo topic** com **routing keys hierarquicas**. O roteamento e feito por pattern matching das routing keys nos bindings de cada fila.
 
 ### Fluxo de Eventos
 
 1. Loja cadastra promocao via Gateway → `promocao.recebida` → MS Promocao
 2. MS Promocao valida assinatura, registra → `promocao.publicada` → Gateway + MS Notificacao
-3. MS Notificacao republica por categoria → `promocao.<categoria>` → Clientes inscritos
+3. MS Notificacao republica por categoria → `promocao.categoria.<categoria>` → Clientes inscritos
 4. Usuario vota via Gateway → `promocao.voto` → MS Ranking
-5. MS Ranking processa voto, se score >= threshold → `promocao.destaque` → MS Notificacao
-6. MS Notificacao republica hot deal → `promocao.<categoria>` → Clientes inscritos
+5. MS Ranking processa voto, se score >= threshold → `promocao.categoria.destaque` → MS Notificacao
+6. MS Notificacao republica hot deal → `promocao.categoria.<categoria>` → Clientes inscritos
 
 ### Apps (Umbrella)
 
@@ -53,7 +55,7 @@ O sistema e composto por **4 microsservicos** + **1 biblioteca compartilhada** +
 | `gateway` | Interface CLI + publicacao/consumo de eventos |
 | `promocao` | Validacao de assinatura e registro de promocoes |
 | `ranking` | Processamento de votos e deteccao de hot deals |
-| `notificacao` | Fan-out de notificacoes por categoria |
+| `notificacao` | Distribuicao de notificacoes por categoria via routing keys |
 | `cliente` | Consumidor de notificacoes por categoria |
 
 ## Stack
