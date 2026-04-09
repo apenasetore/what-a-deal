@@ -24,6 +24,61 @@ defmodule Gateway.Publisher do
     end
   end
 
+  @doc """
+  Publica uma promocao assinada com chave RSA falsa.
+
+  Serve para demonstrar que o MS Promocao descarta eventos com
+  assinatura invalida. Basta chamar no iex:
+
+      Gateway.Publisher.publish_fake_promocao()
+  """
+  @spec publish_fake_promocao() :: :ok | {:error, term()}
+  def publish_fake_promocao do
+    {fake_key, _} = Crypto.generate_key_pair()
+
+    payload = %{
+      "nome" => "Produto Falso",
+      "descricao" => "Evento com assinatura invalida",
+      "preco_original" => 100.0,
+      "preco_promocional" => 1.0,
+      "categoria" => "livro",
+      "loja" => "Loja Fantasma"
+    }
+
+    event = Event.new("promocao.recebida", payload, @service_name)
+    signed = Event.sign(event, fake_key)
+    {:ok, json} = Event.Envelope.encode(signed)
+
+    Logger.warning("Publicando promocao.recebida com assinatura FALSA")
+    Shared.RabbitMQ.publish(:gateway_rabbitmq, "promocao.recebida", json)
+  end
+
+  @doc """
+  Publica um voto assinado com chave RSA falsa.
+
+  Serve para demonstrar que o MS Ranking descarta eventos com
+  assinatura invalida. Basta chamar no iex:
+
+      Gateway.Publisher.publish_fake_voto()
+  """
+  @spec publish_fake_voto() :: :ok | {:error, term()}
+  def publish_fake_voto do
+    {fake_key, _} = Crypto.generate_key_pair()
+
+    payload = %{
+      "promo_id" => "fake-id",
+      "voto" => 1,
+      "promo" => %{"nome" => "Produto Falso", "id" => "fake-id"}
+    }
+
+    event = Event.new("promocao.voto", payload, @service_name)
+    signed = Event.sign(event, fake_key)
+    {:ok, json} = Event.Envelope.encode(signed)
+
+    Logger.warning("Publicando promocao.voto com assinatura FALSA")
+    Shared.RabbitMQ.publish(:gateway_rabbitmq, "promocao.voto", json)
+  end
+
   @spec publish_voto(map(), integer()) :: :ok | {:error, term()}
   def publish_voto(promo, voto) do
     promo_id = promo["id"]
