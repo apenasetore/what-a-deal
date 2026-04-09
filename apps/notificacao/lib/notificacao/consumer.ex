@@ -69,7 +69,7 @@ defmodule Notificacao.Consumer do
 
     keys = %{
       "promocao.publicada" => {promocao_pub, @tipo_nova},
-      "promocao.destaque" => {ranking_pub, @tipo_hot_deal}
+      "promocao.categoria.destaque" => {ranking_pub, @tipo_hot_deal}
     }
 
     RabbitMQ.subscribe(rabbitmq_server, fn routing_key, payload ->
@@ -105,7 +105,7 @@ defmodule Notificacao.Consumer do
          true <- Event.verify(event, public_key),
          {:ok, categoria} <- fetch_categoria(event),
          {:ok, json} <- build_notificacao(tipo, categoria, event) do
-      RabbitMQ.publish(rabbitmq, "promocao.#{categoria}", json)
+      RabbitMQ.publish(rabbitmq, "promocao.categoria.#{categoria}", json)
     else
       :unknown_routing_key ->
         Logger.warning("Routing key desconhecida: #{routing_key}, descartando evento")

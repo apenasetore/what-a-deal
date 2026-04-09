@@ -30,7 +30,7 @@ defmodule Notificacao.Application do
 
   @rabbitmq_name :notificacao_rabbitmq
   @queue "fila_notificacao"
-  @routing_keys ["promocao.publicada", "promocao.destaque"]
+  @routing_keys ["promocao.publicada", "promocao.categoria.destaque"]
 
   @impl true
   def start(_type, _args) do
