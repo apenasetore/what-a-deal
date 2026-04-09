@@ -9,7 +9,7 @@ defmodule Gateway.CLI do
   def loop do
     IO.puts("""
 
-    === PromoHub Gateway ===
+    === What-a-Deal Gateway ===
     1. Cadastrar promocao
     2. Listar promocoes
     3. Votar em promocao
