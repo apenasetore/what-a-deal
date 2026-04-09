@@ -45,7 +45,7 @@ defmodule Gateway.PublisherTest do
   describe "publish_voto/2" do
     setup :start_rabbitmq_voto
 
-    test "publica evento promocao.voto assinado", %{rabbitmq: rabbitmq} do
+    test "publica evento promocao.voto assinado com promo embutida", %{rabbitmq: rabbitmq} do
       ensure_gateway_keys!()
       test_pid = self()
 
@@ -53,7 +53,16 @@ defmodule Gateway.PublisherTest do
         send(test_pid, {:received, routing_key, payload})
       end)
 
-      assert :ok = Publisher.publish_voto("promo-123", 1)
+      promo = %{
+        "id" => "promo-123",
+        "nome" => "Clean Code",
+        "categoria" => "livro",
+        "loja" => "Amazon",
+        "preco_original" => 89.90,
+        "preco_promocional" => 45.00
+      }
+
+      assert :ok = Publisher.publish_voto(promo, 1)
 
       assert_receive {:received, "promocao.voto", json}, 5_000
 
@@ -62,6 +71,7 @@ defmodule Gateway.PublisherTest do
       assert event.source == "gateway"
       assert event.payload["promo_id"] == "promo-123"
       assert event.payload["voto"] == 1
+      assert event.payload["promo"] == promo
     end
   end
 

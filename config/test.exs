@@ -5,3 +5,5 @@ import Config
 config :gateway, autostart: false
 config :promocao, autostart: false
 config :ranking, autostart: false
+config :notificacao, autostart: false
+config :cliente, autostart: false

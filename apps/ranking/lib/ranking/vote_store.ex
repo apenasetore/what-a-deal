@@ -2,7 +2,8 @@ defmodule Ranking.VoteStore do
   @moduledoc """
   Armazena contagem de votos por promocao usando Agent.
 
-  Mantém um mapa %{promo_id => %{up: n, down: n}} em memoria.
+  Mantem um mapa `%{promo_id => %{up: n, down: n, destaque: boolean}}`
+  em memoria.
   """
 
   use Agent
@@ -15,13 +16,13 @@ defmodule Ranking.VoteStore do
   @spec vote(String.t(), integer()) :: integer()
   def vote(promo_id, voto) do
     Agent.get_and_update(__MODULE__, fn state ->
-      entry = Map.get(state, promo_id, %{up: 0, down: 0, destaque: false})
+      entry = entry(state, promo_id)
 
       entry =
-        case voto do
-          v when v > 0 -> %{entry | up: entry.up + 1}
-          v when v < 0 -> %{entry | down: entry.down + 1}
-          _ -> entry
+        cond do
+          voto > 0 -> %{entry | up: entry.up + 1}
+          voto < 0 -> %{entry | down: entry.down + 1}
+          true -> entry
         end
 
       score = entry.up - entry.down
@@ -29,30 +30,21 @@ defmodule Ranking.VoteStore do
     end)
   end
 
-  @doc "Retorna o score atual de uma promocao (up - down)."
-  @spec score(String.t()) :: integer()
-  def score(promo_id) do
-    Agent.get(__MODULE__, fn state ->
-      entry = Map.get(state, promo_id, %{up: 0, down: 0, destaque: false})
-      entry.up - entry.down
-    end)
-  end
-
   @doc "Retorna true se a promocao ja foi marcada como destaque."
   @spec destaque?(String.t()) :: boolean()
   def destaque?(promo_id) do
-    Agent.get(__MODULE__, fn state ->
-      entry = Map.get(state, promo_id, %{up: 0, down: 0, destaque: false})
-      entry.destaque
-    end)
+    Agent.get(__MODULE__, fn state -> entry(state, promo_id).destaque end)
   end
 
   @doc "Marca uma promocao como destaque (evita publicar destaque duplicado)."
   @spec marcar_destaque(String.t()) :: :ok
   def marcar_destaque(promo_id) do
     Agent.update(__MODULE__, fn state ->
-      entry = Map.get(state, promo_id, %{up: 0, down: 0, destaque: false})
-      Map.put(state, promo_id, %{entry | destaque: true})
+      Map.put(state, promo_id, %{entry(state, promo_id) | destaque: true})
     end)
   end
+
+  defp entry(state, promo_id), do: Map.get(state, promo_id, default_entry())
+
+  defp default_entry, do: %{up: 0, down: 0, destaque: false}
 end

@@ -215,7 +215,7 @@ promo_hub/
 **Objetivo:** Fluxo basico de cadastro de promocao funcionando end-to-end.
 
 #### Gateway
-- [ ] CLI interativa com menu:
+- [x] CLI interativa com menu:
   ```
   === PromoHub ===
   1. Cadastrar promoção
@@ -223,20 +223,19 @@ promo_hub/
   3. Votar em promoção
   4. Sair
   ```
-- [ ] Cadastro de promocao: nome, descricao, preco_original, preco_promocional, categoria, loja
-- [ ] Publisher: publica `promocao.recebida` com assinatura digital
-- [ ] Consumer: consome `promocao.publicada`, armazena em PromoStore (GenServer/Agent)
-- [ ] Listar promocoes: exibe do PromoStore local (apenas as validadas)
+- [x] Cadastro de promocao: nome, descricao, preco_original, preco_promocional, categoria, loja
+- [x] Publisher: publica `promocao.recebida` com assinatura digital
+- [x] Consumer: consome `promocao.publicada`, armazena em PromoStore (GenServer/Agent)
+- [x] Listar promocoes: exibe do PromoStore local (apenas as validadas)
 
 #### MS Promocao
-- [ ] Consumer: consome `promocao.recebida`
-- [ ] Valida assinatura digital (chave publica do Gateway)
-- [ ] Registra promocao (Store com ETS ou Agent)
-- [ ] Publica `promocao.publicada` com assinatura digital
+- [x] Consumer: consome `promocao.recebida`
+- [x] Valida assinatura digital (chave publica do Gateway)
+- [x] Publica `promocao.publicada` com assinatura digital
 
 #### Integracao
-- [ ] Teste end-to-end: Gateway cadastra -> Promocao valida e publica -> Gateway recebe e lista
-- [ ] Teste de rejeicao: evento com assinatura invalida e descartado
+- [x] Teste end-to-end: Gateway cadastra -> Promocao valida e publica -> Gateway recebe e lista
+- [x] Teste de rejeicao: evento com assinatura invalida e descartado
 
 **Entregavel:** Cadastrar uma promocao via terminal e ver ela aparecer na listagem.
 

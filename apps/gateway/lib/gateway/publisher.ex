@@ -24,10 +24,12 @@ defmodule Gateway.Publisher do
     end
   end
 
-  @spec publish_voto(String.t(), integer()) :: :ok | {:error, term()}
-  def publish_voto(promo_id, voto) do
+  @spec publish_voto(map(), integer()) :: :ok | {:error, term()}
+  def publish_voto(promo, voto) do
+    promo_id = promo["id"]
+
     with {:ok, private_key} <- Crypto.load_private_key(@service_name),
-         payload <- %{"promo_id" => promo_id, "voto" => voto},
+         payload <- %{"promo_id" => promo_id, "voto" => voto, "promo" => promo},
          event <- Event.new("promocao.voto", payload, @service_name),
          signed <- Event.sign(event, private_key),
          {:ok, json} <- Envelope.encode(signed) do
