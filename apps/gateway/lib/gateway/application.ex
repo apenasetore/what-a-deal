@@ -11,7 +11,9 @@ defmodule Gateway.Application do
           Application.get_env(:gateway, :rabbitmq_url, "amqp://guest:guest@localhost")
 
         [
+
           Gateway.PromoStore,
+          {Plug.Cowboy, scheme: :http, plug: Gateway.Router, options: [port: 4000]},
           {Shared.RabbitMQ,
            name: :gateway_rabbitmq,
            url: rabbitmq_url,
