@@ -56,6 +56,7 @@ defmodule Gateway.CLI do
          {:ok, preco_promocional} <- prompt_float("Preco promocional (ex: 45.00): ") do
       categoria = prompt("Categoria (ex: livro, eletronico): ")
       loja = prompt("Loja: ")
+      email = prompt("Email da loja: ")
 
       promo_data = %{
         "nome" => nome,
@@ -63,7 +64,10 @@ defmodule Gateway.CLI do
         "preco_original" => preco_original,
         "preco_promocional" => preco_promocional,
         "categoria" => categoria,
-        "loja" => loja
+        "store" =>%{
+          "nome"=> loja,
+          "email"=> email,
+        }
       }
 
       case Gateway.Publisher.publish_promocao(promo_data) do

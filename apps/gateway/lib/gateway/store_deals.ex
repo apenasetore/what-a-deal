@@ -1,4 +1,4 @@
-defmodule Gateway.PromoStore do
+defmodule Gateway.DealStore do
   @moduledoc """
   Agent que mantem cache local das promocoes validadas pelo MS Promocao.
 
@@ -14,27 +14,12 @@ defmodule Gateway.PromoStore do
   end
 
   @spec add(map()) :: :ok
-  def add(%{"id" => id} = promo) do
-    Agent.update(__MODULE__, &Map.put(&1, id, promo))
+  def add(%{"id" => id} = deal) do
+    Agent.update(__MODULE__, &Map.put(&1, id, deal))
   end
 
   @spec list() :: [map()]
   def list do
     Agent.get(__MODULE__, &Map.values(&1))
-  end
-
-  @spec get(String.t()) :: map() | nil
-  def get(id) do
-    Agent.get(__MODULE__, &Map.get(&1, id))
-  end
-
-  @spec count() :: non_neg_integer()
-  def count do
-    Agent.get(__MODULE__, &map_size(&1))
-  end
-
-  @spec clear() :: :ok
-  def clear do
-    Agent.update(__MODULE__, fn _ -> %{} end)
   end
 end

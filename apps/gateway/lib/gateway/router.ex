@@ -5,59 +5,42 @@ defmodule Gateway.Router do
   plug :match
   plug :dispatch
 
-  get "/hello" do
-    send_resp(conn, 200, "Hello, world!")
+  # -- Health check -- #
+  get "/health" do
+    send_resp(conn, 200, "Health check passed!")
   end
 
+    # -- Deals Routes -- #
   get "/deals" do
     deals = Gateway.PromoStore.list()
     send_resp(conn, 200, Jason.encode!(deals))
   end
 
   post "/deals" do
-    Gateway.RestAPI.call_post_deal(conn, [])
+    Gateway.DealRestAPI.call_post_deal_publish(conn, [])
   end
 
-  # get "/clients" do
-  #     clients = Gateway.PromoStore.get_clients()
-  #     send_resp(conn, 200, Jason.encode!(clients))
-  #   end
+  post "/subscription" do
+    Gateway.SubscriptionRestAPI.call_post_subscription(conn, [])
+  end
 
-  # post "/clients" do
-  #   Gateway.RestAPI.call_post_client(conn, [])
-  # end
+  get "/subscription/:client" do
+    client_id = conn.params["client"]
+    client = Gateway.SubscriptionStore.get(client_id)
+    send_resp(conn, 200, Jason.encode!(client))
+  end
+
+  put "/subscription" do
+    Gateway.SubscriptionRestAPI.call_put_subscription(conn, [])
+  end
+
+
+  # -- Registrar voto
+  post "/vote" do
+    Gateway.RestAPI.call_client_vote(conn, [])
+  end
+
+  # --
+
+
 end
-
-
-# GET
-# listar_promocoes
-# cliente
-# get /deals/, DelsContoller: show
-# POST
-# criar_cliente
-# cliente
-# post "/clients", ClientController, :create
-# POST
-# registar_interesse
-# cliente
-# post “/subscription/”, SubscriptionController :create
-# DELETE
-# cancelar_interesse
-# cliente
-# delete“/subscription/”, SubscriptionController :delete
-# PATCH
-# votar_promocao
-# cliente
-# patch /deals/, DelsContoller: update
-# POST
-# criar_loja
-# loja
-# post “/store/”, StoreController :create
-# POST
-# criar_promocao
-# loja
-# post “/deal/”, DealController :create
-# DELETE
-# deletar_promocao
-# loja
-# delete “/deal/”, StoreController :delete

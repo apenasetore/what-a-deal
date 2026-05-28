@@ -34,6 +34,7 @@ defmodule Gateway.Consumer do
 
   def handle_info(_msg, state), do: {:noreply, state}
 
+  #TODO colocar promoção destaque para consumir.
   defp handle_message("promocao.publicada", payload) do
     with {:ok, event} <- Envelope.decode(payload),
          {:ok, public_key} <- Crypto.load_public_key("promocao"),
