@@ -64,9 +64,9 @@ defmodule Gateway.CLI do
         "preco_original" => preco_original,
         "preco_promocional" => preco_promocional,
         "categoria" => categoria,
-        "store" =>%{
-          "nome"=> loja,
-          "email"=> email,
+        "store" => %{
+          "nome" => loja,
+          "email" => email
         }
       }
 
@@ -82,7 +82,7 @@ defmodule Gateway.CLI do
   # --- Listar ---
 
   defp listar_promocoes do
-    promos = Gateway.PromoStore.list()
+    promos = Gateway.DealStore.list()
 
     if Enum.empty?(promos) do
       IO.puts("\nNenhuma promocao validada ainda.")
@@ -106,7 +106,7 @@ defmodule Gateway.CLI do
   # --- Votar ---
 
   defp votar_promocao do
-    promos = Gateway.PromoStore.list()
+    promos = Gateway.DealStore.list()
 
     if Enum.empty?(promos) do
       IO.puts("\nNenhuma promocao disponivel para votar.")

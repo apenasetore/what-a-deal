@@ -7,7 +7,7 @@ defmodule Gateway.ConsumerTest do
 
   describe "consome promocao.publicada" do
     setup do
-      start_supervised!(Gateway.PromoStore)
+      start_supervised!(Gateway.DealStore)
 
       # Gera chaves do MS Promocao (quem assina promocao.publicada)
       {priv, pub} = Crypto.generate_key_pair()
@@ -56,8 +56,8 @@ defmodule Gateway.ConsumerTest do
       # Aguarda processamento
       Process.sleep(2_000)
 
-      assert Gateway.PromoStore.count() == 1
-      stored = Gateway.PromoStore.get("promo-001")
+      assert Gateway.DealStore.count() == 1
+      stored = Gateway.DealStore.get("promo-001")
       assert stored["nome"] == "Clean Code"
       assert stored["categoria"] == "livro"
     end
@@ -80,7 +80,7 @@ defmodule Gateway.ConsumerTest do
 
       Process.sleep(2_000)
 
-      assert Gateway.PromoStore.count() == 0
+      assert Gateway.DealStore.count() == 0
     end
   end
 

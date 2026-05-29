@@ -3,7 +3,7 @@ defmodule Gateway.Consumer do
   Consome eventos `promocao.publicada` do RabbitMQ.
 
   Ao receber um evento, verifica a assinatura digital usando a chave
-  publica do MS Promocao. Se valida, armazena a promocao no PromoStore
+  publica do MS Promocao. Se valida, armazena a promocao no DealStore
   local. Eventos com assinatura invalida sao descartados com log de warning.
   """
 
@@ -34,13 +34,13 @@ defmodule Gateway.Consumer do
 
   def handle_info(_msg, state), do: {:noreply, state}
 
-  #TODO colocar promoção destaque para consumir.
+  # TODO colocar promoção destaque para consumir.
   defp handle_message("promocao.publicada", payload) do
     with {:ok, event} <- Envelope.decode(payload),
          {:ok, public_key} <- Crypto.load_public_key("promocao"),
          true <- Event.verify(event, public_key) do
       promo = Map.put(event.payload, "id", event.payload["id"] || event.id)
-      Gateway.PromoStore.add(promo)
+      Gateway.DealStore.add(promo)
       Logger.info("Promocao validada recebida: #{promo["nome"]}")
     else
       false ->

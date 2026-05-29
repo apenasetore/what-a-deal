@@ -2,17 +2,17 @@
 defmodule Gateway.Router do
   use Plug.Router
 
-  plug :match
-  plug :dispatch
+  plug(:match)
+  plug(:dispatch)
 
   # -- Health check -- #
   get "/health" do
     send_resp(conn, 200, "Health check passed!")
   end
 
-    # -- Deals Routes -- #
+  # -- Deals Routes -- #
   get "/deals" do
-    deals = Gateway.PromoStore.list()
+    deals = Gateway.DealStore.list()
     send_resp(conn, 200, Jason.encode!(deals))
   end
 
@@ -24,23 +24,18 @@ defmodule Gateway.Router do
     Gateway.SubscriptionRestAPI.call_post_subscription(conn, [])
   end
 
-  get "/subscription/:client" do
-    client_id = conn.params["client"]
-    client = Gateway.SubscriptionStore.get(client_id)
-    send_resp(conn, 200, Jason.encode!(client))
+  get "/subscription/:cliente_name" do
+    client_name = conn.params["cliente_name"]
+    categories = Gateway.SubscriptionStore.list(client_name)
+    send_resp(conn, 200, Jason.encode!(%{client_name: client_name, categories: categories}))
   end
 
-  put "/subscription" do
-    Gateway.SubscriptionRestAPI.call_put_subscription(conn, [])
+  delete "/subscription" do
+    Gateway.SubscriptionRestAPI.call_delete_subscription(conn, [])
   end
-
 
   # -- Registrar voto
   post "/vote" do
-    Gateway.RestAPI.call_client_vote(conn, [])
+    Gateway.DealRestAPI.call_client_vote(conn, [])
   end
-
-  # --
-
-
 end
