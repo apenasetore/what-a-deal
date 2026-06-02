@@ -34,7 +34,6 @@ defmodule Gateway.Consumer do
 
   def handle_info(_msg, state), do: {:noreply, state}
 
-  # TODO colocar promoção destaque para consumir.
   defp handle_message("promocao.publicada", payload) do
     with {:ok, event} <- Envelope.decode(payload),
          {:ok, public_key} <- Crypto.load_public_key("promocao"),
@@ -48,6 +47,19 @@ defmodule Gateway.Consumer do
 
       {:error, reason} ->
         Logger.error("Erro ao processar promocao.publicada: #{inspect(reason)}")
+    end
+  end
+
+  defp handle_message("promocao.categoria." <> rest, payload) do
+    Logger.info("[SSE] mensagem RabbitMQ recebida routing_key=promocao.categoria.#{rest}")
+
+    case Jason.decode(payload) do
+      {:ok, %{"categoria" => categoria}} ->
+        Logger.info("[SSE] decodificado categoria=#{categoria}, chamando SSERegistry.notify")
+        Gateway.SSERegistry.notify(categoria, payload)
+
+      other ->
+        Logger.warning("[SSE] payload sem categoria: #{inspect(other)}")
     end
   end
 

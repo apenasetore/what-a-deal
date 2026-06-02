@@ -38,4 +38,7 @@ defmodule Gateway.Router do
   post "/vote" do
     Gateway.DealRestAPI.call_client_vote(conn, [])
   end
+
+  # /notifications/:client_name e tratado pelo Gateway.SSEHandler (cowboy_loop)
+  # registrado no dispatch do Cowboy em Gateway.Application.
 end

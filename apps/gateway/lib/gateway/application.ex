@@ -13,11 +13,31 @@ defmodule Gateway.Application do
         [
           Gateway.DealStore,
           Gateway.SubscriptionStore,
-          {Plug.Cowboy, scheme: :http, plug: Gateway.Router, options: [port: 4000]},
+          Gateway.SSERegistry,
+          {Plug.Cowboy,
+           scheme: :http,
+           plug: Gateway.Router,
+           options: [
+             port: 4000,
+             # SSE: conexoes ficam abertas indefinidamente. Sem isso o Cowboy
+             # derruba streams ociosos (idle_timeout default 60s) e mata o
+             # processo do handler com :kill, pulando o terminate/3.
+             protocol_options: [idle_timeout: :infinity],
+             dispatch: [
+               {:_,
+                [
+                  {"/notifications/:client_name", Gateway.SSEHandler, []},
+                  {:_, Plug.Cowboy.Handler, {Gateway.Router, []}}
+                ]}
+             ]
+           ]},
           {Shared.RabbitMQ,
            name: :gateway_rabbitmq,
            url: rabbitmq_url,
-           queues: [{"gateway_promocoes", ["promocao.publicada"]}]},
+           queues: [
+             {"gateway_promocoes", ["promocao.publicada"]},
+             {"gateway_sse", ["promocao.categoria.#"]}
+           ]},
           Gateway.Consumer
         ]
       else

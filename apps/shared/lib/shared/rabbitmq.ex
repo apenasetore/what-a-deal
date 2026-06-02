@@ -213,14 +213,16 @@ defmodule Shared.RabbitMQ do
   defp connect(url, queues, queue_opts) do
     with {:ok, connection} <- AMQP.Connection.open(url),
          {:ok, channel} <- AMQP.Channel.open(connection) do
-      AMQP.Exchange.declare(channel, @exchange, @exchange_type)
+      AMQP.Exchange.declare(channel, @exchange, @exchange_type, durable: true)
       Enum.each(queues, &declare_and_bind_queue(channel, &1, queue_opts))
       {:ok, connection, channel}
     end
   end
 
   defp declare_and_bind_queue(channel, {queue_name, topics}, queue_opts) do
-    AMQP.Queue.declare(channel, queue_name, queue_opts)
+    # RabbitMQ 4.x proibe filas transientes nao-exclusivas (transient_nonexcl_queues)
+    # por padrao, entao declaramos filas duraveis salvo override explicito em queue_opts.
+    AMQP.Queue.declare(channel, queue_name, Keyword.put_new(queue_opts, :durable, true))
 
     Enum.each(topics, fn topic ->
       AMQP.Queue.bind(channel, queue_name, @exchange, routing_key: topic)
