@@ -19,9 +19,6 @@ defmodule Gateway.Application do
            plug: Gateway.Router,
            options: [
              port: 4000,
-             # SSE: conexoes ficam abertas indefinidamente. Sem isso o Cowboy
-             # derruba streams ociosos (idle_timeout default 60s) e mata o
-             # processo do handler com :kill, pulando o terminate/3.
              protocol_options: [idle_timeout: :infinity],
              dispatch: [
                {:_,

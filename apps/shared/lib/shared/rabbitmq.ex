@@ -213,7 +213,7 @@ defmodule Shared.RabbitMQ do
   defp connect(url, queues, queue_opts) do
     with {:ok, connection} <- AMQP.Connection.open(url),
          {:ok, channel} <- AMQP.Channel.open(connection) do
-      AMQP.Exchange.declare(channel, @exchange, @exchange_type, durable: true)
+      AMQP.Exchange.declare(channel, @exchange, @exchange_type)
       Enum.each(queues, &declare_and_bind_queue(channel, &1, queue_opts))
       {:ok, connection, channel}
     end

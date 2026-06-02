@@ -139,9 +139,8 @@ defmodule Notificacao.Consumer do
 
   defp fetch_categoria(_event), do: :missing_categoria
 
-  defp build_notificacao(tipo, categoria, %Event{} = event) do
+  defp build_notificacao(_tipo, categoria, %Event{} = event) do
     %{
-      "tipo" => tipo,
       "categoria" => categoria,
       "promo_id" => event.id,
       "source" => event.source,

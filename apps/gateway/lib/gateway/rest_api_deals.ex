@@ -86,7 +86,7 @@ defmodule Gateway.DealRestAPI do
               "up" ->
                 Gateway.Publisher.publish_voto(
                   %{
-                    "id" => id,
+                  "id" => id,
                     "nome" => nome,
                     "descricao" => descricao,
                     "preco_original" => preco_original,
@@ -112,7 +112,6 @@ defmodule Gateway.DealRestAPI do
                   },
                   -1
                 )
-
               _ ->
                 conn
                 |> put_resp_content_type("application/json")

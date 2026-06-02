@@ -50,18 +50,21 @@ defmodule Gateway.Consumer do
     end
   end
 
-  defp handle_message("promocao.categoria." <> rest, payload) do
-    Logger.info("[SSE] mensagem RabbitMQ recebida routing_key=promocao.categoria.#{rest}")
 
-    case Jason.decode(payload) do
-      {:ok, %{"categoria" => categoria}} ->
-        Logger.info("[SSE] decodificado categoria=#{categoria}, chamando SSERegistry.notify")
-        Gateway.SSERegistry.notify(categoria, payload)
-
-      other ->
-        Logger.warning("[SSE] payload sem categoria: #{inspect(other)}")
+    defp handle_message("promocao.categoria." <> rest, payload) do
+      Logger.info("[SSE] mensagem RabbitMQ recebida routing_key=promocao.categoria.#{rest}")
+        case Jason.decode(payload) do
+        {:ok, %{"categoria" => categoria}} ->
+          Logger.info("[SSE] decodificado categoria=#{categoria}, chamando SSERegistry.notify")
+          Gateway.SSERegistry.notify(categoria, payload)
+          if rest == "destaque" do
+            Logger.info("[SSE] categoria é destaque, notificando SSERegistry")
+            Gateway.SSERegistry.notify(rest, payload)
+          end
+        other ->
+          Logger.warning("[SSE] payload sem categoria: #{inspect(other)}")
+      end
     end
-  end
 
   defp handle_message(routing_key, _payload) do
     Logger.debug("Mensagem ignorada no Gateway: #{routing_key}")
