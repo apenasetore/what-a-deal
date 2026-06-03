@@ -38,4 +38,9 @@ defmodule Gateway.Router do
   post "/vote" do
     Gateway.DealRestAPI.call_client_vote(conn, [])
   end
+
+  # -- SSE: stream em tempo real das categorias que o cliente assina
+  get "/stream/:client_name" do
+    Gateway.SSE.stream(conn, conn.params["client_name"])
+  end
 end

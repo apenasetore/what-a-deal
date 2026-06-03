@@ -51,6 +51,48 @@ defmodule Gateway.Consumer do
     end
   end
 
+  # Hot deals vindos do MS Ranking: Event envelope ASSINADO. Verifica a
+  # assinatura com a chave publica do ranking antes de empurrar pro SSE.
+  # (Precisa vir ANTES da clausula de prefixo "promocao.categoria." abaixo.)
+  defp handle_message("promocao.categoria.destaque", payload) do
+    with {:ok, event} <- Envelope.decode(payload),
+         {:ok, public_key} <- Crypto.load_public_key("ranking"),
+         true <- Event.verify(event, public_key) do
+      # Normaliza o envelope do Ranking no mesmo formato de notificacao do
+      # MS Notificacao, para o frontend tratar todos os eventos igual.
+      notificacao = %{
+        "tipo" => "hot deal",
+        "categoria" => event.payload["categoria"],
+        "promo_id" => event.payload["id"] || event.id,
+        "source" => event.source,
+        "timestamp" => DateTime.to_iso8601(event.timestamp),
+        "promo" => event.payload
+      }
+
+      Gateway.SSE.broadcast_category("destaque", notificacao)
+      Logger.info("SSE destaque enviado: #{event.payload["nome"]}")
+    else
+      false ->
+        Logger.warning("Assinatura invalida em promocao.categoria.destaque — descartado")
+
+      {:error, reason} ->
+        Logger.error("Erro ao processar promocao.categoria.destaque: #{inspect(reason)}")
+    end
+  end
+
+  # Notificacoes por categoria vindas do MS Notificacao: JSON puro (nao
+  # assinado), ja no formato %{"tipo" => ..., "categoria" => ...,
+  # "promo" => ...}. Repassamos o mapa inteiro pro frontend.
+  defp handle_message("promocao.categoria." <> categoria, payload) do
+    case Jason.decode(payload) do
+      {:ok, notificacao} ->
+        Gateway.SSE.broadcast_category(categoria, notificacao)
+
+      {:error, reason} ->
+        Logger.warning("Erro ao decodificar promocao.categoria.#{categoria}: #{inspect(reason)}")
+    end
+  end
+
   defp handle_message(routing_key, _payload) do
     Logger.debug("Mensagem ignorada no Gateway: #{routing_key}")
   end

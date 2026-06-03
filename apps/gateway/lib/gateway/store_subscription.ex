@@ -34,4 +34,13 @@ defmodule Gateway.SubscriptionStore do
   def list(client_name) do
     Agent.get(__MODULE__, &Map.get(&1, client_name))
   end
+
+  # Lookup reverso: nomes dos clientes que seguem `category`. Usado pelo
+  # Gateway.SSE para rotear cada notificacao apenas a quem assinou.
+  @spec clients_for(String.t()) :: [String.t()]
+  def clients_for(category) do
+    Agent.get(__MODULE__, fn state ->
+      for {client, categories} <- state, is_list(categories), category in categories, do: client
+    end)
+  end
 end

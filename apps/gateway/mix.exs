@@ -27,7 +27,9 @@ defmodule Gateway.MixProject do
   defp deps do
     [
       {:shared, in_umbrella: true},
-      {:plug_cowboy, "~> 2.0"}
+      {:plug_cowboy, "~> 2.0"},
+      {:sse, "~> 0.4"},
+      {:event_bus, ">= 1.6.0"}
     ]
   end
 end
