@@ -44,6 +44,8 @@ defmodule Notificacao.Consumer do
 
   require Logger
 
+  import Swoosh.Email
+
   alias Shared.Crypto
   alias Shared.Event
   alias Shared.Event.Envelope
@@ -92,6 +94,7 @@ defmodule Notificacao.Consumer do
   - `:missing_categoria` — payload sem campo `categoria`, descartado
   - `{:error, reason}` — falha ao decodificar/codificar o envelope/notificacao
   """
+
   @spec handle_message(
           String.t(),
           binary(),
@@ -99,6 +102,8 @@ defmodule Notificacao.Consumer do
           GenServer.server()
         ) ::
           :ok | :invalid_signature | :unknown_routing_key | :missing_categoria | {:error, term()}
+
+
   def handle_message(routing_key, payload, keys, rabbitmq) do
     with {:ok, {public_key, tipo}} <- fetch_key(keys, routing_key),
          {:ok, event} <- Envelope.decode(payload),
@@ -106,7 +111,13 @@ defmodule Notificacao.Consumer do
          {:ok, categoria} <- fetch_categoria(event),
          {:ok, json} <- build_notificacao(tipo, categoria, event) do
       RabbitMQ.publish(rabbitmq, "promocao.categoria.#{categoria}", json)
+      if tipo == "hot deal" do
+        enviar_email_hot_deal(categoria, event)
+      else
+        Logger.info("Notificacao de nova promocao publicada para categoria #{categoria}")
+      end
     else
+
       :unknown_routing_key ->
         Logger.warning("Routing key desconhecida: #{routing_key}, descartando evento")
         :unknown_routing_key
@@ -149,5 +160,28 @@ defmodule Notificacao.Consumer do
       "promo" => event.payload
     }
     |> Jason.encode()
+  end
+
+  # Envia o email de hot deal para a empresa que publicou a promocao. O
+  # destinatario vem do campo `email` do payload. Falhas sao apenas logadas —
+  # nao derrubam o processamento do evento.
+  defp enviar_email_hot_deal(categoria, %Event{payload: payload}) do
+    destino = payload["email"]
+
+    new()
+    |> to({payload["loja"] || "", destino})
+    |> from({"What a Deal", System.get_env("GMAIL_USER") || "no-reply@whatadeal"})
+    |> subject("🔥 Sua promocao virou Hot Deal!")
+    |> text_body(
+      "A promocao \"#{payload["nome"]}\" entrou em destaque na categoria #{categoria}."
+    )
+    |> Notificacao.Mailer.deliver()
+    |> case do
+      {:ok, _} ->
+        Logger.info("Email hot deal enviado para #{destino} (categoria #{categoria})")
+
+      {:error, reason} ->
+        Logger.error("Falha ao enviar email hot deal para #{destino}: #{inspect(reason)}")
+    end
   end
 end
