@@ -34,7 +34,6 @@ defmodule Gateway.Consumer do
 
   def handle_info(_msg, state), do: {:noreply, state}
 
-  # TODO colocar promoção destaque para consumir.
   defp handle_message("promocao.publicada", payload) do
     with {:ok, event} <- Envelope.decode(payload),
          {:ok, public_key} <- Crypto.load_public_key("promocao"),
@@ -51,9 +50,7 @@ defmodule Gateway.Consumer do
     end
   end
 
-  # Hot deals vindos do MS Ranking: Event envelope ASSINADO. Verifica a
-  # assinatura com a chave publica do ranking antes de empurrar pro SSE.
-  # (Precisa vir ANTES da clausula de prefixo "promocao.categoria." abaixo.)
+
   defp handle_message("promocao.categoria.destaque", payload) do
     with {:ok, event} <- Envelope.decode(payload),
          {:ok, public_key} <- Crypto.load_public_key("ranking"),
