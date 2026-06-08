@@ -3,7 +3,7 @@ defmodule Mix.Tasks.GenKeys do
 
   @moduledoc """
   Gera pares de chaves RSA 2048 para os microsservicos que precisam
-  assinar eventos: `gateway`, `promocao` e `ranking`.
+  assinar eventos: `gateway`, `promocao`, `ranking` e `notificacao`.
 
   As chaves sao salvas em `apps/shared/priv/keys/<servico>/private.pem`
   e `public.pem`.
@@ -21,15 +21,13 @@ defmodule Mix.Tasks.GenKeys do
 
   - `gateway` — assina `promocao.recebida` e `promocao.voto`
   - `promocao` — assina `promocao.publicada`
-  - `ranking` — assina `promocao.destaque`
-
-  O servico `notificacao` nao precisa de chaves porque nao publica
-  eventos assinados — apenas republica em routing keys de categoria.
+  - `ranking` — assina `promocao.categoria.destaque`
+  - `notificacao` — assina as notificacoes em `promocao.categoria.<categoria>`
   """
 
   use Mix.Task
 
-  @services ["gateway", "promocao", "ranking"]
+  @services ["gateway", "promocao", "ranking", "notificacao"]
   @source_priv "apps/shared/priv"
 
   @impl Mix.Task

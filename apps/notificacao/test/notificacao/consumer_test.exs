@@ -5,10 +5,11 @@ defmodule Notificacao.ConsumerTest do
   alias Shared.Crypto
   alias Shared.Event
 
-  describe "handle_message/4 — evento valido" do
+  describe "handle_message/5 — evento valido" do
     setup do
       {promocao_priv, promocao_pub} = Crypto.generate_key_pair()
       {ranking_priv, ranking_pub} = Crypto.generate_key_pair()
+      {notif_priv, notif_pub} = Crypto.generate_key_pair()
 
       keys = %{
         "promocao.publicada" => {promocao_pub, "nova"},
@@ -18,14 +19,14 @@ defmodule Notificacao.ConsumerTest do
       %{
         promocao_priv: promocao_priv,
         ranking_priv: ranking_priv,
+        notif_priv: notif_priv,
+        notif_pub: notif_pub,
         keys: keys
       }
     end
 
-    test "publica notificacao 'nova' em promocao.<categoria> para promocao.publicada", %{
-      promocao_priv: promocao_priv,
-      keys: keys
-    } do
+    test "publica envelope 'nova' assinado em promocao.categoria.<categoria> para promocao.publicada",
+         %{promocao_priv: promocao_priv, notif_priv: notif_priv, notif_pub: notif_pub, keys: keys} do
       payload = %{"nome" => "Clean Code", "preco" => 45.0, "categoria" => "livro"}
 
       json =
@@ -36,20 +37,20 @@ defmodule Notificacao.ConsumerTest do
 
       rabbitmq = start_fake_rabbitmq()
 
-      assert :ok = Consumer.handle_message("promocao.publicada", json, keys, rabbitmq)
+      assert :ok = Consumer.handle_message("promocao.publicada", json, keys, rabbitmq, notif_priv)
 
       assert_received {:published, "promocao.categoria.livro", notif_json}
-      {:ok, notif} = Jason.decode(notif_json)
-      assert notif["tipo"] == "nova"
-      assert notif["categoria"] == "livro"
-      assert notif["promo"]["nome"] == "Clean Code"
+      {:ok, notif} = Event.Envelope.decode(notif_json)
+      assert Event.verify(notif, notif_pub)
+      assert notif.source == "notificacao"
+      assert notif.type == "promocao.categoria.livro"
+      assert notif.payload["tipo"] == "nova"
+      assert notif.payload["categoria"] == "livro"
+      assert notif.payload["promo"]["nome"] == "Clean Code"
     end
 
-    test "publica notificacao 'hot deal' em promocao.categoria.<categoria> para promocao.categoria.destaque",
-         %{
-           ranking_priv: ranking_priv,
-           keys: keys
-         } do
+    test "publica envelope 'hot deal' assinado em promocao.categoria.<categoria> para promocao.categoria.destaque",
+         %{ranking_priv: ranking_priv, notif_priv: notif_priv, notif_pub: notif_pub, keys: keys} do
       payload = %{"nome" => "Clean Code", "categoria" => "livro"}
 
       json =
@@ -60,16 +61,25 @@ defmodule Notificacao.ConsumerTest do
 
       rabbitmq = start_fake_rabbitmq()
 
-      assert :ok = Consumer.handle_message("promocao.categoria.destaque", json, keys, rabbitmq)
+      assert :ok =
+               Consumer.handle_message(
+                 "promocao.categoria.destaque",
+                 json,
+                 keys,
+                 rabbitmq,
+                 notif_priv
+               )
 
       assert_received {:published, "promocao.categoria.livro", notif_json}
-      {:ok, notif} = Jason.decode(notif_json)
-      assert notif["tipo"] == "hot deal"
-      assert notif["categoria"] == "livro"
+      {:ok, notif} = Event.Envelope.decode(notif_json)
+      assert Event.verify(notif, notif_pub)
+      assert notif.payload["tipo"] == "hot deal"
+      assert notif.payload["categoria"] == "livro"
     end
 
     test "notificacao de destaque contem a palavra literal 'hot deal'", %{
       ranking_priv: ranking_priv,
+      notif_priv: notif_priv,
       keys: keys
     } do
       payload = %{"categoria" => "livro"}
@@ -82,7 +92,7 @@ defmodule Notificacao.ConsumerTest do
 
       rabbitmq = start_fake_rabbitmq()
 
-      Consumer.handle_message("promocao.categoria.destaque", json, keys, rabbitmq)
+      Consumer.handle_message("promocao.categoria.destaque", json, keys, rabbitmq, notif_priv)
 
       assert_received {:published, _, notif_json}
       assert notif_json =~ "hot deal"
@@ -90,6 +100,7 @@ defmodule Notificacao.ConsumerTest do
 
     test "notificacao normal NAO contem 'hot deal'", %{
       promocao_priv: promocao_priv,
+      notif_priv: notif_priv,
       keys: keys
     } do
       payload = %{"categoria" => "livro", "nome" => "X"}
@@ -102,28 +113,35 @@ defmodule Notificacao.ConsumerTest do
 
       rabbitmq = start_fake_rabbitmq()
 
-      Consumer.handle_message("promocao.publicada", json, keys, rabbitmq)
+      Consumer.handle_message("promocao.publicada", json, keys, rabbitmq, notif_priv)
 
       assert_received {:published, _, notif_json}
       refute notif_json =~ "hot deal"
     end
   end
 
-  describe "handle_message/4 — evento invalido" do
+  describe "handle_message/5 — evento invalido" do
     setup do
       {promocao_priv, promocao_pub} = Crypto.generate_key_pair()
       {ranking_priv, ranking_pub} = Crypto.generate_key_pair()
+      {notif_priv, _notif_pub} = Crypto.generate_key_pair()
 
       keys = %{
         "promocao.publicada" => {promocao_pub, "nova"},
         "promocao.categoria.destaque" => {ranking_pub, "hot deal"}
       }
 
-      %{promocao_priv: promocao_priv, ranking_priv: ranking_priv, keys: keys}
+      %{
+        promocao_priv: promocao_priv,
+        ranking_priv: ranking_priv,
+        notif_priv: notif_priv,
+        keys: keys
+      }
     end
 
     test "descarta evento com assinatura adulterada", %{
       promocao_priv: promocao_priv,
+      notif_priv: notif_priv,
       keys: keys
     } do
       original =
@@ -136,12 +154,12 @@ defmodule Notificacao.ConsumerTest do
       rabbitmq = start_fake_rabbitmq()
 
       assert :invalid_signature =
-               Consumer.handle_message("promocao.publicada", json, keys, rabbitmq)
+               Consumer.handle_message("promocao.publicada", json, keys, rabbitmq, notif_priv)
 
       refute_received {:published, _, _}
     end
 
-    test "descarta evento assinado por chave desconhecida", %{keys: keys} do
+    test "descarta evento assinado por chave desconhecida", %{notif_priv: notif_priv, keys: keys} do
       {outra_priv, _} = Crypto.generate_key_pair()
 
       original =
@@ -153,13 +171,14 @@ defmodule Notificacao.ConsumerTest do
       rabbitmq = start_fake_rabbitmq()
 
       assert :invalid_signature =
-               Consumer.handle_message("promocao.publicada", json, keys, rabbitmq)
+               Consumer.handle_message("promocao.publicada", json, keys, rabbitmq, notif_priv)
 
       refute_received {:published, _, _}
     end
 
     test "descarta promocao.categoria.destaque assinada com chave do promocao", %{
       promocao_priv: promocao_priv,
+      notif_priv: notif_priv,
       keys: keys
     } do
       original =
@@ -171,12 +190,22 @@ defmodule Notificacao.ConsumerTest do
       rabbitmq = start_fake_rabbitmq()
 
       assert :invalid_signature =
-               Consumer.handle_message("promocao.categoria.destaque", json, keys, rabbitmq)
+               Consumer.handle_message(
+                 "promocao.categoria.destaque",
+                 json,
+                 keys,
+                 rabbitmq,
+                 notif_priv
+               )
 
       refute_received {:published, _, _}
     end
 
-    test "descarta routing key desconhecida", %{promocao_priv: promocao_priv, keys: keys} do
+    test "descarta routing key desconhecida", %{
+      promocao_priv: promocao_priv,
+      notif_priv: notif_priv,
+      keys: keys
+    } do
       original =
         Event.new("promocao.recebida", %{"categoria" => "livro"}, "gateway")
         |> Event.sign(promocao_priv)
@@ -186,12 +215,16 @@ defmodule Notificacao.ConsumerTest do
       rabbitmq = start_fake_rabbitmq()
 
       assert :unknown_routing_key =
-               Consumer.handle_message("promocao.recebida", json, keys, rabbitmq)
+               Consumer.handle_message("promocao.recebida", json, keys, rabbitmq, notif_priv)
 
       refute_received {:published, _, _}
     end
 
-    test "descarta evento sem categoria", %{promocao_priv: promocao_priv, keys: keys} do
+    test "descarta evento sem categoria", %{
+      promocao_priv: promocao_priv,
+      notif_priv: notif_priv,
+      keys: keys
+    } do
       original =
         Event.new("promocao.publicada", %{"nome" => "X"}, "promocao")
         |> Event.sign(promocao_priv)
@@ -201,16 +234,22 @@ defmodule Notificacao.ConsumerTest do
       rabbitmq = start_fake_rabbitmq()
 
       assert :missing_categoria =
-               Consumer.handle_message("promocao.publicada", json, keys, rabbitmq)
+               Consumer.handle_message("promocao.publicada", json, keys, rabbitmq, notif_priv)
 
       refute_received {:published, _, _}
     end
 
-    test "retorna erro para JSON invalido", %{keys: keys} do
+    test "retorna erro para JSON invalido", %{notif_priv: notif_priv, keys: keys} do
       rabbitmq = start_fake_rabbitmq()
 
       assert {:error, _} =
-               Consumer.handle_message("promocao.publicada", "isso nao e json", keys, rabbitmq)
+               Consumer.handle_message(
+                 "promocao.publicada",
+                 "isso nao e json",
+                 keys,
+                 rabbitmq,
+                 notif_priv
+               )
 
       refute_received {:published, _, _}
     end

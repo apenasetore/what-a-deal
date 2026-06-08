@@ -1,10 +1,18 @@
 defmodule Gateway.Consumer do
   @moduledoc """
-  Consome eventos `promocao.publicada` do RabbitMQ.
+  Consome eventos do RabbitMQ para o Gateway:
 
-  Ao receber um evento, verifica a assinatura digital usando a chave
-  publica do MS Promocao. Se valida, armazena a promocao no DealStore
-  local. Eventos com assinatura invalida sao descartados com log de warning.
+  - `promocao.publicada` — verifica a assinatura com a chave publica do MS
+    Promocao e, se valida, armazena a promocao no DealStore local.
+
+  - `promocao.categoria.<categoria>` — notificacoes assinadas pelo MS
+    Notificacao. Verifica a assinatura com a chave publica do `notificacao`,
+    extrai a `categoria` do payload e encaminha o conteudo aos clientes SSE
+    inscritos naquela categoria. Quando a notificacao e um hot deal
+    (`tipo: "hot deal"`), tambem encaminha para os inscritos na categoria
+    especial `"destaque"`.
+
+  Eventos com assinatura invalida sao descartados com log de warning.
   """
 
   use GenServer
@@ -50,23 +58,46 @@ defmodule Gateway.Consumer do
     end
   end
 
+  defp handle_message("promocao.categoria." <> rest, payload) do
+    Logger.info("[SSE] mensagem RabbitMQ recebida routing_key=promocao.categoria.#{rest}")
 
-    defp handle_message("promocao.categoria." <> rest, payload) do
-      Logger.info("[SSE] mensagem RabbitMQ recebida routing_key=promocao.categoria.#{rest}")
-        case Jason.decode(payload) do
-        {:ok, %{"categoria" => categoria}} ->
-          Logger.info("[SSE] decodificado categoria=#{categoria}, chamando SSERegistry.notify")
-          Gateway.SSERegistry.notify(categoria, payload)
-          if rest == "destaque" do
-            Logger.info("[SSE] categoria é destaque, notificando SSERegistry")
-            Gateway.SSERegistry.notify(rest, payload)
-          end
-        other ->
-          Logger.warning("[SSE] payload sem categoria: #{inspect(other)}")
+    with {:ok, event} <- Envelope.decode(payload),
+         {:ok, public_key} <- Crypto.load_public_key("notificacao"),
+         true <- Event.verify(event, public_key),
+         %{"categoria" => categoria} <- event.payload,
+         {:ok, sse_json} <- build_sse_payload(event) do
+      Logger.info("[SSE] decodificado categoria=#{categoria}, chamando SSERegistry.notify")
+      Gateway.SSERegistry.notify(categoria, sse_json)
+
+      # Hot deals tambem vao para quem segue a categoria especial "destaque",
+      # independente da categoria real da promocao.
+      if event.payload["tipo"] == "hot deal" and categoria != "destaque" do
+        Logger.info("[SSE] hot deal — notificando tambem inscritos em 'destaque'")
+        Gateway.SSERegistry.notify("destaque", sse_json)
       end
+    else
+      false ->
+        Logger.warning("[SSE] assinatura invalida em promocao.categoria.#{rest} — descartado")
+
+      {:error, reason} ->
+        Logger.warning("[SSE] payload invalido em promocao.categoria.#{rest}: #{inspect(reason)}")
+
+      other ->
+        Logger.warning("[SSE] payload sem categoria: #{inspect(other)}")
     end
+  end
 
   defp handle_message(routing_key, _payload) do
     Logger.debug("Mensagem ignorada no Gateway: #{routing_key}")
+  end
+
+  # Serializa o conteudo da notificacao no formato flat esperado pelos
+  # clientes SSE: {tipo, categoria, promo_id, promo, source, timestamp}.
+  # Os campos source/timestamp vem do envelope assinado.
+  defp build_sse_payload(%Event{} = event) do
+    event.payload
+    |> Map.put("source", event.source)
+    |> Map.put("timestamp", DateTime.to_iso8601(event.timestamp))
+    |> Jason.encode()
   end
 end
