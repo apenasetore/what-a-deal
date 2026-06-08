@@ -39,6 +39,7 @@ defmodule Gateway.Consumer do
          {:ok, public_key} <- Crypto.load_public_key("promocao"),
          true <- Event.verify(event, public_key) do
       promo = Map.put(event.payload, "id", event.payload["id"] || event.id)
+      # Registra a promocao validada no DealStore para o frontend buscar via API REST
       Gateway.DealStore.add(promo)
       Logger.info("Promocao validada recebida: #{promo["nome"]}")
     else
