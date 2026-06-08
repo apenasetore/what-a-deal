@@ -3,7 +3,7 @@ defmodule Gateway.Consumer do
   Consome eventos `promocao.publicada` do RabbitMQ.
 
   Ao receber um evento, verifica a assinatura digital usando a chave
-  publica do MS Promocao. Se valida, armazena a promocao no PromoStore
+  publica do MS Promocao. Se valida, armazena a promocao no DealStore
   local. Eventos com assinatura invalida sao descartados com log de warning.
   """
 
@@ -39,7 +39,7 @@ defmodule Gateway.Consumer do
          {:ok, public_key} <- Crypto.load_public_key("promocao"),
          true <- Event.verify(event, public_key) do
       promo = Map.put(event.payload, "id", event.payload["id"] || event.id)
-      Gateway.PromoStore.add(promo)
+      Gateway.DealStore.add(promo)
       Logger.info("Promocao validada recebida: #{promo["nome"]}")
     else
       false ->
@@ -47,6 +47,46 @@ defmodule Gateway.Consumer do
 
       {:error, reason} ->
         Logger.error("Erro ao processar promocao.publicada: #{inspect(reason)}")
+    end
+  end
+
+
+  defp handle_message("promocao.categoria.destaque", payload) do
+    with {:ok, event} <- Envelope.decode(payload),
+         {:ok, public_key} <- Crypto.load_public_key("ranking"),
+         true <- Event.verify(event, public_key) do
+      # Normaliza o envelope do Ranking no mesmo formato de notificacao do
+      # MS Notificacao, para o frontend tratar todos os eventos igual.
+      notificacao = %{
+        "tipo" => "hot deal",
+        "categoria" => event.payload["categoria"],
+        "promo_id" => event.payload["id"] || event.id,
+        "source" => event.source,
+        "timestamp" => DateTime.to_iso8601(event.timestamp),
+        "promo" => event.payload
+      }
+
+      Gateway.SSE.broadcast_category("destaque", notificacao)
+      Logger.info("SSE destaque enviado: #{event.payload["nome"]}")
+    else
+      false ->
+        Logger.warning("Assinatura invalida em promocao.categoria.destaque — descartado")
+
+      {:error, reason} ->
+        Logger.error("Erro ao processar promocao.categoria.destaque: #{inspect(reason)}")
+    end
+  end
+
+  # Notificacoes por categoria vindas do MS Notificacao: JSON puro (nao
+  # assinado), ja no formato %{"tipo" => ..., "categoria" => ...,
+  # "promo" => ...}. Repassamos o mapa inteiro pro frontend.
+  defp handle_message("promocao.categoria." <> categoria, payload) do
+    case Jason.decode(payload) do
+      {:ok, notificacao} ->
+        Gateway.SSE.broadcast_category(categoria, notificacao)
+
+      {:error, reason} ->
+        Logger.warning("Erro ao decodificar promocao.categoria.#{categoria}: #{inspect(reason)}")
     end
   end
 

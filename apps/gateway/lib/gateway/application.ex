@@ -11,11 +11,18 @@ defmodule Gateway.Application do
           Application.get_env(:gateway, :rabbitmq_url, "amqp://guest:guest@localhost")
 
         [
-          Gateway.PromoStore,
+          Gateway.DealStore,
+          Gateway.SubscriptionStore,
+          {Plug.Cowboy,
+           scheme: :http,
+           plug: Gateway.Router,
+           options: [port: 4000, protocol_options: [idle_timeout: :infinity]]},
           {Shared.RabbitMQ,
            name: :gateway_rabbitmq,
            url: rabbitmq_url,
-           queues: [{"gateway_promocoes", ["promocao.publicada"]}]},
+           queues: [
+             {"gateway_promocoes", ["promocao.publicada", "promocao.categoria.#"]}
+           ]},
           Gateway.Consumer
         ]
       else
