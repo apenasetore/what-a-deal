@@ -18,7 +18,7 @@ defmodule Notificacao.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :swoosh],
       mod: {Notificacao.Application, []}
     ]
   end
@@ -26,7 +26,9 @@ defmodule Notificacao.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:shared, in_umbrella: true}
+      {:shared, in_umbrella: true},
+      {:swoosh, "~> 1.17"},
+      {:gen_smtp, "~> 1.2"}
     ]
   end
 end
