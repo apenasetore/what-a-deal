@@ -5,12 +5,10 @@ defmodule Gateway.Router do
   plug(:match)
   plug(:dispatch)
 
-  # -- Health check -- #
   get "/health" do
     send_resp(conn, 200, "Health check passed!")
   end
 
-  # -- Deals Routes -- #
   get "/deals" do
     deals = Gateway.DealStore.list()
     send_resp(conn, 200, Jason.encode!(deals))
@@ -18,6 +16,11 @@ defmodule Gateway.Router do
 
   post "/deals" do
     Gateway.DealRestAPI.call_post_deal_publish(conn, [])
+  end
+
+  post "/stores" do
+    Gateway.StoreStore.add(conn.body_params)
+    send_resp(conn, 201, "Store added successfully!")
   end
 
   post "/subscription" do
@@ -34,12 +37,10 @@ defmodule Gateway.Router do
     Gateway.SubscriptionRestAPI.call_delete_subscription(conn, [])
   end
 
-  # -- Registrar voto
   post "/vote" do
     Gateway.DealRestAPI.call_client_vote(conn, [])
   end
 
-  # -- SSE: stream em tempo real das categorias que o cliente assina
   get "/stream/:client_name" do
     Gateway.SSE.stream(conn, conn.params["client_name"])
   end

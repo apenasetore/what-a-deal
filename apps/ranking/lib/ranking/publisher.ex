@@ -1,10 +1,4 @@
 defmodule Ranking.Publisher do
-  @moduledoc """
-  Publica eventos `promocao.destaque` no RabbitMQ.
-
-  Quando o score de uma promocao atinge o threshold, assina e publica
-  o evento de destaque usando a chave privada do Ranking.
-  """
 
   require Logger
 
@@ -12,7 +6,6 @@ defmodule Ranking.Publisher do
 
   @service_name "ranking"
 
-  @doc "Publica evento promocao.destaque assinado para a promocao dada."
   @spec publish_destaque(map(), GenServer.server()) :: :ok | {:error, term()}
   def publish_destaque(promo_payload, rabbitmq) do
     with {:ok, private_key} <- Crypto.load_private_key(@service_name),

@@ -170,7 +170,7 @@ defmodule Notificacao.Consumer do
     new()
     |> to({payload["loja"] || "", destino})
     |> from({"What a Deal", System.get_env("GMAIL_USER") || "no-reply@whatadeal"})
-    |> subject("Sua promocao foi publicada!")
+    |> subject("💵 Sua promocao foi publicada!")
     |> text_body(
       "A promocao \"#{payload["nome"]}\" foi publicada na categoria #{categoria} e ja esta disponivel para os clientes."
     )
@@ -183,16 +183,15 @@ defmodule Notificacao.Consumer do
         Logger.error("Falha ao enviar email de aprovacao para #{destino}: #{inspect(reason)}")
     end
   end
-  # Envia o email de hot deal para a empresa que publicou a promocao. O
-  # destinatario vem do campo `email` do payload. Falhas sao apenas logadas —
-  # nao derrubam o processamento do evento.
+
+
   defp enviar_email_hot_deal(categoria, %Event{payload: payload}) do
     destino = payload["email"]
 
     new()
     |> to({payload["loja"] || "", destino})
     |> from({"What a Deal", System.get_env("GMAIL_USER") || "no-reply@whatadeal"})
-    |> subject("Sua promocao virou Hot Deal!")
+    |> subject("🥵 Sua promocao virou Hot Deal!")
     |> text_body(
       "A promocao \"#{payload["nome"]}\" entrou em destaque na categoria #{categoria}."
     )

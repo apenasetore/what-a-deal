@@ -11,7 +11,6 @@ defmodule Gateway.SubscriptionRestAPI do
         case Jason.decode(body) do
           {:ok, %{"client_name" => client_name, "category" => category}} ->
             Gateway.SubscriptionStore.add(%{"client_name" => client_name, "category" => category})
-            Gateway.SSE
             conn
             |> put_resp_content_type("application/json")
             |> send_resp(200, Jason.encode!(%{message: "Subscription successful"}))
