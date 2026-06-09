@@ -13,6 +13,7 @@ defmodule Gateway.Application do
         [
           Gateway.DealStore,
           Gateway.SubscriptionStore,
+          Gateway.StoreStore,
           {Plug.Cowboy,
            scheme: :http,
            plug: Gateway.Router,
