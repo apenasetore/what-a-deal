@@ -14,12 +14,12 @@ defmodule Gateway.StoreStore do
   end
 
   @spec add(map()) :: :ok
-  def add(%{"nome" => nome, "pubKey" => pubKey} = store) do
-    Agent.update(__MODULE__, &Map.put(&1, nome, pubKey))
+  def add(%{"nome" => nome, "pub_key" => pub_key}) do
+    Agent.update(__MODULE__, &Map.put(&1, nome, pub_key))
   end
 
-  @spec get_key() :: [map()]
-  def get_key(nome)do
+  @spec get_key(String.t()) :: String.t() | nil
+  def get_key(nome) do
     Agent.get(__MODULE__, &Map.get(&1, nome))
   end
 end

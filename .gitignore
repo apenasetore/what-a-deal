@@ -11,3 +11,6 @@ erl_crash.dump
 
 # Chaves de assinatura digital — geradas via `mix gen_keys`
 apps/shared/priv/keys/
+
+# Credenciais (Gmail App Password etc.) — nao versionar
+.env
