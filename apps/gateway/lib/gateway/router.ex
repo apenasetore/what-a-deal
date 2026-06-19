@@ -18,9 +18,8 @@ defmodule Gateway.Router do
     Gateway.DealRestAPI.call_post_deal_publish(conn, [])
   end
 
-  post "/stores" do
-    Gateway.StoreStore.add(conn.body_params)
-    send_resp(conn, 201, "Store added successfully!")
+  post "/store" do
+    Gateway.StoreRestAPI.call_post_store(conn, [])
   end
 
   post "/subscription" do

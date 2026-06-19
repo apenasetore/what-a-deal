@@ -9,8 +9,8 @@ defmodule Gateway.StoreRestAPI do
         {:ok, body, _conn} = Plug.Conn.read_body(conn)
 
         case Jason.decode(body) do
-          {:ok, %{"nome" => nome, "pubKey" => pubKey}} ->
-            Gateway.StoreStore.add(%{"nome" => nome, "pubKey" => pubKey})
+          {:ok, %{"nome" => nome, "pub_key" => pub_key}} ->
+            Gateway.StoreStore.add(%{"nome" => nome, "pub_key" => pub_key})
             conn
             |> put_resp_content_type("application/json")
             |> send_resp(200, Jason.encode!(%{message: "Store added successfully"}))

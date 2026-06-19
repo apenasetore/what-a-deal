@@ -177,4 +177,28 @@ defmodule Shared.Crypto do
   def verify(payload, signature, public_key) do
     :public_key.verify(payload, :sha256, signature, public_key)
   end
+
+  @doc """
+  Verifica uma assinatura usando uma chave publica fornecida como string PEM.
+
+  Funcao recebe o PEM (formato X.509/SubjectPublicKeyInfo) — como o enviado pelo front-end no
+  cadastro de loja — decodifica para o record e delega a `verify/3`.
+
+  Retorna `false` (em vez de levantar excecao) se o PEM for invalido ou nulo.
+
+  ## Exemplo
+
+      true = Shared.Crypto.verify_pem("dados", signature, store_public_pem)
+  """
+  @spec verify_pem(binary(), binary(), String.t() | nil) :: boolean()
+  def verify_pem(_payload, _signature, nil), do: false
+
+  def verify_pem(payload, signature, public_pem) do
+    case :public_key.pem_decode(public_pem) do
+      [entry | _] -> verify(payload, signature, :public_key.pem_entry_decode(entry))
+      _ -> false
+    end
+  rescue
+    _ -> false
+  end
 end
