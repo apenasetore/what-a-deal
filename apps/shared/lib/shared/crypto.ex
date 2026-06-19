@@ -1,205 +1,178 @@
-defmodule Shared.Crypto do
-  @moduledoc """
-  Assinatura digital RSA para autenticacao entre microsservicos.
+defmodule Gateway.DealRestAPI do
+  import Plug.Conn
 
-  Cada microsservico possui um par de chaves RSA (2048 bits) armazenado
-  em formato PEM no diretorio `priv/keys/<service_name>/`. A chave privada
-  e usada para assinar eventos antes de publica-los no RabbitMQ, e a chave
-  publica e usada pelos consumidores para verificar autenticidade e integridade.
+  def init(options), do: options
 
-  ## Fluxo tipico
+  def call_post_deal_publish(conn, _opts) do
+    case get_req_header(conn, "content-type") do
+      ["application/json"] ->
+        # Read and parse the JSON payload
+        {:ok, body, _conn} = Plug.Conn.read_body(conn)
 
-      # Setup (uma vez por servico):
-      {priv, pub} = Shared.Crypto.generate_key_pair()
-      Shared.Crypto.save_keys("gateway", priv, pub)
+        case Jason.decode(body) do
+          {:ok,
+           %{
+             "nome" => nome,
+             "descricao" => descricao,
+             "preco_original" => preco_original,
+             "preco_promocional" => preco_promocional,
+             "categoria" => categoria,
+             "loja" => loja,
+             "email" => email
+           } = payload} ->
+            promo_data = %{
+              "nome" => nome,
+              "descricao" => descricao,
+              "preco_original" => preco_original,
+              "preco_promocional" => preco_promocional,
+              "categoria" => categoria,
+              "loja" => loja,
+              "email" => email
+            }
 
-      # Publicacao (produtor assina):
-      {:ok, priv} = Shared.Crypto.load_private_key("gateway")
-      signature = Shared.Crypto.sign(payload, priv)
+            if valid_store_signature?(promo_data, payload["signature"]) do
+              status =
+                case Gateway.Publisher.publish_promocao(promo_data) do
+                  :ok -> "Promocao enviada para validacao!"
+                  {:error, reason} -> "Erro ao enviar: #{inspect(reason)}"
+                end
 
-      # Consumo (consumidor verifica):
-      {:ok, pub} = Shared.Crypto.load_public_key("gateway")
-      true = Shared.Crypto.verify(payload, signature, pub)
+              response = %{
+                message: "User data received",
+                data: %{
+                  promo_data: promo_data,
+                  status: status
+                }
+              }
 
-  ## Algoritmo
+              conn
+              |> put_resp_content_type("application/json")
+              |> send_resp(200, Jason.encode!(response))
+            else
+              conn
+              |> put_resp_content_type("application/json")
+              |> send_resp(401, Jason.encode!(%{error: "Invalid or missing signature"}))
+            end
 
-  Utiliza RSA 2048 bits com SHA-256 (RSASSA-PKCS1-v1_5), via modulos
-  `:public_key` e `:crypto` da stdlib do Erlang/OTP.
-  """
+          {:error, _reason} ->
+            conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(400, Jason.encode!(%{error: "Invalid JSON format"}))
+        end
 
-  require Record
-
-  Record.defrecord(
-    :rsa_private_key,
-    :RSAPrivateKey,
-    Record.extract(:RSAPrivateKey, from_lib: "public_key/include/public_key.hrl")
-  )
-
-  Record.defrecord(
-    :rsa_public_key,
-    :RSAPublicKey,
-    Record.extract(:RSAPublicKey, from_lib: "public_key/include/public_key.hrl")
-  )
-
-  @type private_key :: :public_key.rsa_private_key()
-  @type public_key :: :public_key.rsa_public_key()
-
-  @doc """
-  Gera um par de chaves RSA de 2048 bits.
-
-  Retorna `{private_key, public_key}`, onde ambas sao records Erlang
-  (`:RSAPrivateKey` e `:RSAPublicKey`).
-
-  ## Exemplo
-
-      {priv, pub} = Shared.Crypto.generate_key_pair()
-  """
-  @spec generate_key_pair() :: {private_key(), public_key()}
-  def generate_key_pair do
-    private_key = :public_key.generate_key({:rsa, 2048, 65_537})
-    {private_key, extract_public_key(private_key)}
+      _ ->
+        # Handle missing or incorrect content-type
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(415, Jason.encode!(%{error: "Unsupported Media Type"}))
+    end
   end
 
-  defp extract_public_key(private_key) do
-    rsa_public_key(
-      modulus: rsa_private_key(private_key, :modulus),
-      publicExponent: rsa_private_key(private_key, :publicExponent)
+  # Verifica a assinatura da loja sobre a promocao usando a chave publica
+  # cadastrada no login da loja. Reconstroi a mesma mensagem que o
+
+  # front-end assinou (mesma ordem de campos, precos com 2 casas decimais).
+  defp valid_store_signature?(_promo, nil), do: false
+
+  defp valid_store_signature?(promo, signature_b64) do
+    with {:ok, signature} <- Base.decode64(signature_b64),
+         pub_pem when is_binary(pub_pem) <- Gateway.StoreStore.get_key(promo["loja"]) do
+      Shared.Crypto.verify_pem(canonical_deal(promo), signature, pub_pem)
+    else
+      _ -> false
+    end
+  end
+
+  defp canonical_deal(promo) do
+    Enum.join(
+      [
+        promo["loja"],
+        promo["nome"],
+        promo["descricao"],
+        promo["categoria"],
+        promo["email"],
+        format_price(promo["preco_original"]),
+        format_price(promo["preco_promocional"])
+      ],
+      "|"
     )
   end
 
-  @doc """
-  Persiste um par de chaves em formato PEM.
+  # Formata o preco com 2 casas decimais, espelhando Number.toFixed(2) do JS.
+  defp format_price(price) when is_integer(price), do: format_price(price * 1.0)
+  defp format_price(price) when is_float(price), do: :erlang.float_to_binary(price, decimals: 2)
 
-  Cria o diretorio `priv/keys/<service_name>/` e salva dois arquivos:
-  - `private.pem` — chave privada em formato PKCS#1
-  - `public.pem` — chave publica em formato X.509/SPKI
+  def call_client_vote(conn, _opts) do
+    case get_req_header(conn, "content-type") do
+      ["application/json"] ->
+        {:ok, body, _conn} = Plug.Conn.read_body(conn)
 
-  ## Exemplo
+        case Jason.decode(body) do
+          {:ok,
+           %{
+             "promo" => %{
+               "id" => id,
+               "nome" => nome,
+               "descricao" => descricao,
+               "preco_original" => preco_original,
+               "preco_promocional" => preco_promocional,
+               "categoria" => categoria,
+               "loja" => loja,
+               "email" => email
+             },
+             "vote" => vote
+           }} ->
+            case vote do
+              "up" ->
+                Gateway.Publisher.publish_voto(
+                  %{
+                    "id" => id,
+                    "nome" => nome,
+                    "descricao" => descricao,
+                    "preco_original" => preco_original,
+                    "preco_promocional" => preco_promocional,
+                    "categoria" => categoria,
+                    "loja" => loja,
+                    "email" => email
+                  },
+                  1
+                )
 
-      Shared.Crypto.save_keys("gateway", private_key, public_key)
-  """
-  @spec save_keys(String.t(), private_key(), public_key()) :: :ok
-  def save_keys(service_name, private_key, public_key) do
-    dir = keys_dir(service_name)
-    File.mkdir_p!(dir)
+              "down" ->
+                Gateway.Publisher.publish_voto(
+                  %{
+                    "id" => id,
+                    "nome" => nome,
+                    "descricao" => descricao,
+                    "preco_original" => preco_original,
+                    "preco_promocional" => preco_promocional,
+                    "categoria" => categoria,
+                    "loja" => loja,
+                    "email" => email
+                  },
+                  -1
+                )
 
-    # Chave privada -> PEM
-    private_pem_entry = :public_key.pem_entry_encode(:RSAPrivateKey, private_key)
-    private_pem = :public_key.pem_encode([private_pem_entry])
-    File.write!(Path.join(dir, "private.pem"), private_pem)
+              _ ->
+                conn
+                |> put_resp_content_type("application/json")
+                |> send_resp(400, Jason.encode!(%{error: "Invalid vote value"}))
+            end
 
-    # Chave pública -> PEM
-    public_pem_entry = :public_key.pem_entry_encode(:SubjectPublicKeyInfo, public_key)
-    public_pem = :public_key.pem_encode([public_pem_entry])
-    File.write!(Path.join(dir, "public.pem"), public_pem)
+            conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(200, Jason.encode!(%{message: "Vote registered successfully"}))
 
-    :ok
-  end
+          {:error, _reason} ->
+            conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(400, Jason.encode!(%{error: "Invalid JSON format"}))
+        end
 
-  defp keys_dir(service_name) do
-    Path.join([:code.priv_dir(:shared), "keys", service_name])
-  end
-
-  @doc """
-  Carrega a chave privada de um microsservico a partir do arquivo PEM.
-
-  Retorna `{:ok, private_key}` ou `{:error, reason}` se o arquivo nao
-  existir ou o conteudo for invalido.
-
-  ## Exemplo
-
-      {:ok, priv} = Shared.Crypto.load_private_key("gateway")
-  """
-  @spec load_private_key(String.t()) :: {:ok, private_key()} | {:error, term()}
-  def load_private_key(service_name) do
-    path = Path.join(keys_dir(service_name), "private.pem")
-
-    with {:ok, pem_binary} <- File.read(path),
-         [pem_entry] <- :public_key.pem_decode(pem_binary),
-         private_key <- :public_key.pem_entry_decode(pem_entry) do
-      {:ok, private_key}
-    else
-      {:error, reason} -> {:error, reason}
-      [] -> {:error, :invalid_pem}
+      _ ->
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(400, Jason.encode!(%{error: "Content-Type must be application/json"}))
     end
-  end
-
-  @doc """
-  Carrega a chave publica de um microsservico a partir do arquivo PEM.
-
-  Retorna `{:ok, public_key}` ou `{:error, reason}` se o arquivo nao
-  existir ou o conteudo for invalido.
-
-  ## Exemplo
-
-      {:ok, pub} = Shared.Crypto.load_public_key("gateway")
-  """
-  @spec load_public_key(String.t()) :: {:ok, public_key()} | {:error, term()}
-  def load_public_key(service_name) do
-    path = Path.join(keys_dir(service_name), "public.pem")
-
-    with {:ok, pem_binary} <- File.read(path),
-         [pem_entry] <- :public_key.pem_decode(pem_binary),
-         public_key <- :public_key.pem_entry_decode(pem_entry) do
-      {:ok, public_key}
-    else
-      {:error, reason} -> {:error, reason}
-      [] -> {:error, :invalid_pem}
-    end
-  end
-
-  @doc """
-  Assina um payload binario usando SHA-256 com RSA (RSASSA-PKCS1-v1_5).
-
-  Retorna a assinatura como binario de 256 bytes.
-
-  ## Exemplo
-
-      signature = Shared.Crypto.sign("dados do evento", private_key)
-  """
-  @spec sign(binary(), private_key()) :: binary()
-  def sign(payload, private_key) do
-    :public_key.sign(payload, :sha256, private_key)
-  end
-
-  @doc """
-  Verifica se a assinatura corresponde ao payload, usando a chave publica.
-
-  Retorna `true` se a assinatura e valida, `false` caso contrario.
-  Uma assinatura invalida indica que o payload foi alterado ou que foi
-  assinado por uma chave privada diferente.
-
-  ## Exemplo
-
-      true = Shared.Crypto.verify("dados do evento", signature, public_key)
-  """
-  @spec verify(binary(), binary(), public_key()) :: boolean()
-  def verify(payload, signature, public_key) do
-    :public_key.verify(payload, :sha256, signature, public_key)
-  end
-
-  @doc """
-  Verifica uma assinatura usando uma chave publica fornecida como string PEM.
-
-  Diferente de `verify/3`, que recebe o record da chave, esta funcao recebe o
-  PEM (formato X.509/SubjectPublicKeyInfo) — como o enviado pelo front-end no
-  cadastro de loja — decodifica para o record e delega a `verify/3`.
-
-  Retorna `false` (em vez de levantar excecao) se o PEM for invalido ou nulo.
-
-  ## Exemplo
-
-      true = Shared.Crypto.verify_pem("dados", signature, store_public_pem)
-  """
-  @spec verify_pem(binary(), binary(), String.t() | nil) :: boolean()
-  def verify_pem(_payload, _signature, nil), do: false
-
-  def verify_pem(payload, signature, public_pem) do
-    case :public_key.pem_decode(public_pem) do
-      [entry | _] -> verify(payload, signature, :public_key.pem_entry_decode(entry))
-      _ -> false
-    end
-  rescue
-    _ -> false
   end
 end
