@@ -69,7 +69,9 @@ defmodule Gateway.DealRestAPI do
   end
 
   # Verifica a assinatura da loja sobre a promocao usando a chave publica
+
   # cadastrada no login da loja. Reconstroi a mesma mensagem que o
+
   # front-end assinou (mesma ordem de campos, precos com 2 casas decimais).
   defp valid_store_signature?(_promo, nil), do: false
 
